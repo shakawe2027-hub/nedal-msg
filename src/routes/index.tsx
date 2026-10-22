@@ -1,24 +1,112 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { getSchoolData } from "@/lib/school.functions";
+import { AbsenceForm, FollowForm, MarksForm, FORM_LABELS, type FormKind } from "@/components/forms";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
+const schoolQuery = queryOptions({ queryKey: ["school"], queryFn: () => getSchoolData(), staleTime: 5 * 60_000 });
+
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "نماذج الصفوف للطباعة — n2028" },
+      { name: "description", content: "إنشاء نماذج المتابعة والعلامات والغياب لكل صف وطباعتها مباشرة من ملف المدرسة." },
+      { property: "og:title", content: "نماذج الصفوف للطباعة" },
+      { property: "og:description", content: "نماذج متابعة وعلامات وغياب جاهزة للطباعة لكل شعبة." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  loader: ({ context }) => context.queryClient.ensureQueryData(schoolQuery),
   component: Index,
+  errorComponent: ({ error }) => (
+    <div className="app-shell"><div className="panel"><h1 className="app-title">تعذر قراءة الملف</h1><p className="text-muted-foreground mt-2">{(error as Error).message}</p></div></div>
+  ),
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
+  const { data } = useSuspenseQuery(schoolQuery);
+  const qc = useQueryClient();
+  const [kind, setKind] = useState<FormKind>("follow-all");
+  const [classKey, setClassKey] = useState(data.classes[0]?.key ?? "");
+  const [teacherIdx, setTeacherIdx] = useState(0);
+  const [term, setTerm] = useState(data.terms[0] ?? "الأول");
+  const now = new Date();
+  const defMonth = Math.max(0, data.months.findIndex((m) => m.num === now.getMonth() + 1));
+  const [monthIdx, setMonthIdx] = useState(defMonth);
+
+  const isLang = kind === "follow-lang" || kind === "marks-lang";
+  const classOptions = useMemo(() => data.classes.filter((c) => !isLang || c.grade >= 11), [data, isLang]);
+  useEffect(() => {
+    if (!classOptions.some((c) => c.key === classKey)) setClassKey(classOptions[0]?.key ?? "");
+  }, [classOptions, classKey]);
+
+  const teacher = data.teachers[teacherIdx];
+  const cls = kind === "absence"
+    ? data.classes.find((c) => c.key === teacher?.classKey)
+    : data.classes.find((c) => c.key === classKey);
+  const month = data.months[monthIdx];
+  const landscape = kind === "absence" || kind.startsWith("follow");
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="app-shell" dir="rtl">
+      <style>{`@page { size: A4 ${landscape ? "landscape" : "portrait"}; margin: 8mm; }`}</style>
+      <header className="no-print app-header">
+        <div>
+          <p className="app-kicker">ملف n2028 · Google Drive</p>
+          <h1 className="app-title">نماذج الصفوف للطباعة</h1>
+        </div>
+        <button className="btn-ghost" onClick={() => qc.invalidateQueries({ queryKey: ["school"] })}>تحديث من الملف</button>
+      </header>
+
+      <section className="no-print panel">
+        <div className="kind-tabs">
+          {(Object.keys(FORM_LABELS) as FormKind[]).map((k) => (
+            <button key={k} className="kind-tab" data-active={k === kind} onClick={() => setKind(k)}>{FORM_LABELS[k]}</button>
+          ))}
+        </div>
+        <div className="controls">
+          {kind === "absence" ? (
+            <>
+              <label className="control">مربي الصف
+                <select value={teacherIdx} onChange={(e) => setTeacherIdx(Number(e.target.value))}>
+                  {data.teachers.map((t, i) => <option key={i} value={i}>{t.name} — {t.classKey}</option>)}
+                </select>
+              </label>
+              <label className="control">الشهر
+                <select value={monthIdx} onChange={(e) => setMonthIdx(Number(e.target.value))}>
+                  {data.months.map((m, i) => <option key={i} value={i}>{m.name} {m.year}</option>)}
+                </select>
+              </label>
+            </>
+          ) : (
+            <label className="control">الصف
+              <select value={classKey} onChange={(e) => setClassKey(e.target.value)}>
+                {classOptions.map((c) => <option key={c.key} value={c.key}>{c.key} — {c.title}</option>)}
+              </select>
+            </label>
+          )}
+          <label className="control">الفصل
+            <select value={term} onChange={(e) => setTerm(e.target.value)}>
+              {(data.terms.length ? data.terms : ["الأول", "الثاني"]).map((t) => <option key={t}>{t}</option>)}
+            </select>
+          </label>
+          <button className="btn-print" onClick={() => window.print()} disabled={!cls}>طباعة</button>
+        </div>
+        {cls && <p className="hint">{cls.students.length} طالباً في {cls.title}</p>}
+      </section>
+
+      <main className="paper-wrap">
+        {!cls ? (
+          <p className="hint no-print">لا توجد ورقة أسماء مطابقة لهذا الاختيار.</p>
+        ) : kind === "absence" ? (
+          month && <AbsenceForm cls={cls} term={term} month={month} teacher={teacher?.name ?? ""} />
+        ) : kind.startsWith("follow") ? (
+          <FollowForm cls={cls} term={term} lang={isLang} />
+        ) : (
+          <MarksForm cls={cls} term={term} lang={isLang} />
+        )}
+      </main>
     </div>
   );
 }
