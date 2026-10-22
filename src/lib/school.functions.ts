@@ -8,8 +8,8 @@ const FILE_NAME = "n2028";
 const str = (v: unknown) => (v === null || v === undefined ? "" : String(v).trim());
 
 async function gw(path: string) {
-  const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-  const DRIVE_KEY = process.env.GOOGLE_DRIVE_API_KEY;
+  const LOVABLE_API_KEY = process.env['LOVABLE_API_KEY'];
+  const DRIVE_KEY = process.env['GOOGLE_DRIVE_API_KEY'];
   if (!LOVABLE_API_KEY || !DRIVE_KEY) throw new Error("Google Drive غير مربوط");
   const res = await fetch(`${GATEWAY_URL}${path}`, {
     headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "X-Connection-Api-Key": DRIVE_KEY },
@@ -29,7 +29,7 @@ export const getSchoolData = createServerFn({ method: "GET" }).handler(async ():
   const wb = XLSX.read(buf, { type: "array" });
   // Pad so index 0 is always column A and index 0 row is row 1, regardless of the sheet's used range.
   const rows = (name: string) => {
-    const ws = wb.Sheets[name];
+    const ws = wb.Sheets[name]!;
     const start = XLSX.utils.decode_range(ws["!ref"] ?? "A1").s;
     const data = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: null, blankrows: true });
     const pad = Array(start.c).fill(null);
@@ -42,7 +42,7 @@ export const getSchoolData = createServerFn({ method: "GET" }).handler(async ():
     if (!m) continue;
     const r = rows(name);
     const grade = Number(m[1]);
-    const section = m[2].trim();
+    const section = m[2]!.trim();
     const students = r
       .slice(3)
       .map((row) => ({ name: str(row?.[1]), id: str(row?.[2]) }))

@@ -20,7 +20,7 @@ export function gradeFromName(name: string): number | null {
 export function parseMonthLabel(label: string): { num: number; name: string } | null {
   const m = label.match(/^\s*(\d{1,2})\s*\.\s*([^(:]+)/);
   if (!m) return null;
-  return { num: Number(m[1]), name: m[2].trim() };
+  return { num: Number(m[1]), name: m[2]!.trim() };
 }
 
 export function daysInMonth(year: number, month: number): number {
