@@ -51,6 +51,11 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --font-sans: "IBM Plex Sans Arabic", system-ui, sans-serif;
+  --font-print: "Noto Naskh Arabic", serif;
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-weekend: var(--weekend);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -62,15 +67,18 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
+  --radius: 0.5rem;
+  --background: oklch(0.955 0.012 85);
+  --foreground: oklch(0.25 0.03 160);
+  --paper: oklch(1 0 0);
+  --ink: oklch(0.18 0 0);
+  --weekend: oklch(0.86 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.129 0.042 264.695);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
+  --primary: oklch(0.42 0.08 160);
+  --primary-foreground: oklch(0.98 0.01 85);
   --secondary: oklch(0.968 0.007 247.896);
   --secondary-foreground: oklch(0.208 0.042 265.755);
   --muted: oklch(0.968 0.007 247.896);
@@ -79,7 +87,7 @@
   --accent-foreground: oklch(0.208 0.042 265.755);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508);
+  --border: oklch(0.86 0.02 85);
   --input: oklch(0.929 0.013 255.508);
   --ring: oklch(0.704 0.04 256.788);
   --chart-1: oklch(0.646 0.222 41.116);
@@ -141,4 +149,50 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
+}
+
+body { font-family: var(--font-sans); }
+.app-shell { @apply mx-auto max-w-7xl px-4 py-8; }
+.app-header { @apply mb-6 flex items-end justify-between gap-4; }
+.app-kicker { @apply text-xs tracking-wide text-muted-foreground; }
+.app-title { @apply text-3xl font-bold text-primary; }
+.panel { @apply rounded-xl border bg-card p-5 shadow-sm; }
+.kind-tabs { @apply mb-5 flex flex-wrap gap-2; }
+.kind-tab { @apply rounded-full border px-4 py-2 text-sm transition-colors hover:bg-accent; }
+.kind-tab[data-active="true"] { @apply border-primary bg-primary text-primary-foreground; }
+.controls { @apply flex flex-wrap items-end gap-4; }
+.control { @apply flex flex-col gap-1 text-sm font-medium; }
+.control select { @apply min-w-56 rounded-md border bg-background px-3 py-2 font-normal; }
+.btn-print { @apply rounded-md bg-primary px-6 py-2 font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-40; }
+.btn-ghost { @apply rounded-md border px-4 py-2 text-sm hover:bg-accent; }
+.hint { @apply mt-3 text-sm text-muted-foreground; }
+.paper-wrap { @apply mt-6 overflow-x-auto; }
+
+.sheet { @apply mx-auto bg-paper p-6 text-ink shadow-md; font-family: var(--font-print); width: max-content; min-width: 100%; }
+.sheet-head { @apply mb-3 text-center; }
+.sheet-head h2 { @apply mb-2 text-xl font-bold; }
+.sheet-fields { @apply flex flex-wrap justify-center gap-x-8 gap-y-1 text-sm; }
+.sheet-field-value { @apply inline-block min-w-24 border-b border-dotted border-ink px-1; }
+.sheet-table { @apply w-full border-collapse text-xs; }
+.sheet-table th, .sheet-table td { @apply border border-ink px-1 text-center; height: 1.45rem; }
+.sheet-table th { @apply font-bold; }
+.sheet-table .col-name, .sheet-table .cell-name { @apply whitespace-nowrap px-2 text-start; min-width: 12rem; }
+.sheet-table .col-num { width: 2rem; }
+.sheet-table .col-group { @apply text-[0.68rem] leading-tight; max-width: 7rem; }
+.sheet-table .col-sum { background: oklch(0.95 0 0); }
+.sheet-absence .sheet-table td:not(.cell-name), .sheet-absence .sheet-table th:not(.col-name) { min-width: 1.35rem; }
+.day-weekend { background: var(--weekend) !important; }
+.day-out { background: repeating-linear-gradient(45deg, var(--paper) 0 3px, var(--weekend) 3px 4px) !important; }
+.day-name span { writing-mode: vertical-rl; display: inline-block; font-size: 0.6rem; height: 3.2rem; }
+
+@media print {
+  .no-print { display: none !important; }
+  body, .app-shell { background: var(--paper); padding: 0; margin: 0; max-width: none; }
+  .paper-wrap { margin: 0; overflow: visible; }
+  .sheet { box-shadow: none; padding: 0; width: 100%; }
+  .sheet-table { font-size: 0.62rem; }
+  .sheet-table th, .sheet-table td { height: 1.2rem; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  thead { display: table-header-group; }
+  tr { break-inside: avoid; }
 }
