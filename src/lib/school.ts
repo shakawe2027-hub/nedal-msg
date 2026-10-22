@@ -38,7 +38,7 @@ export function monthDays(year: number, month: number): DayCell[] {
     const day = i + 1;
     if (day > len) return { day, weekday: null, weekend: false, outside: true };
     const wd = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
-    return { day, weekday: AR_DAYS[wd], weekend: wd === 5 || wd === 6, outside: false };
+    return { day, weekday: AR_DAYS[wd] ?? null, weekend: wd === 5 || wd === 6, outside: false };
   });
 }
 

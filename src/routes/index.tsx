@@ -20,7 +20,7 @@ export const Route = createFileRoute("/")({
   loader: ({ context }) => context.queryClient.ensureQueryData(schoolQuery),
   component: Index,
   errorComponent: ({ error }) => (
-    <div className="app-shell"><div className="panel"><h1 className="app-title">تعذر قراءة الملف</h1><p className="text-muted-foreground mt-2">{error.message}</p></div></div>
+    <div className="app-shell"><div className="panel"><h1 className="app-title">تعذر قراءة الملف</h1><p className="text-muted-foreground mt-2">{(error as Error).message}</p></div></div>
   ),
 });
 
