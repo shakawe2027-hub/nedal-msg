@@ -27,8 +27,14 @@ export const getSchoolData = createServerFn({ method: "GET" }).handler(async ():
   if (!file) throw new Error(`لم يتم العثور على الملف ${FILE_NAME}`);
   const buf = await (await gw(`/files/${file.id}?alt=media`)).arrayBuffer();
   const wb = XLSX.read(buf, { type: "array" });
-  const rows = (name: string) =>
-    XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[name], { header: 1, defval: null, blankrows: true });
+  // Pad so index 0 is always column A and index 0 row is row 1, regardless of the sheet's used range.
+  const rows = (name: string) => {
+    const ws = wb.Sheets[name];
+    const start = XLSX.utils.decode_range(ws["!ref"] ?? "A1").s;
+    const data = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: null, blankrows: true });
+    const pad = Array(start.c).fill(null);
+    return [...Array(start.r).fill([]), ...data.map((r) => [...pad, ...r])] as unknown[][];
+  };
 
   const classes: SchoolClass[] = [];
   for (const name of wb.SheetNames) {
