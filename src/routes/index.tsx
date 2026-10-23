@@ -74,7 +74,13 @@ function Index() {
                 </select>
               </label>
               <label className="control">الشهر
-                <select value={monthIdx} onChange={(e) => setMonthIdx(Number(e.target.value))}>
+                <select value={monthIdx} onChange={(e) => {
+                  const i = Number(e.target.value);
+                  setMonthIdx(i);
+                  const m = data.months[i];
+                  const ts = data.terms.length ? data.terms : ["الأول", "الثاني"];
+                  if (m) setTerm((m.num >= 8 ? ts[0] : ts[1] ?? ts[0]) ?? "الأول");
+                }}>
                   {data.months.map((m, i) => <option key={i} value={i}>{m.name} {m.year}</option>)}
                 </select>
               </label>

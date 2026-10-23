@@ -10,6 +10,17 @@ export const FORM_LABELS: Record<FormKind, string> = {
   absence: "غياب",
 };
 
+import type { CSSProperties, ReactNode } from "react";
+
+function Sheet({ rows, landscape, extra, children }: { rows: number; landscape: boolean; extra?: string; children: ReactNode }) {
+  return (
+    <div className={`sheet ${landscape ? "sheet-landscape" : "sheet-portrait"} ${extra ?? ""}`} style={{ "--rows": rows } as CSSProperties}>
+      {children}
+      <div className="sheet-footer">by: nedal qazzaz</div>
+    </div>
+  );
+}
+
 function Field({ label, value }: { label: string; value?: string }) {
   return (
     <span className="sheet-field">
@@ -27,7 +38,7 @@ export function FollowForm({ cls, term, lang }: { cls: SchoolClass; term: string
     { t: "سلوك الطالب والحفاظ على الأدوات والأجهزة", n: 2 },
   ];
   return (
-    <div className="sheet">
+    <Sheet rows={cls.students.length + 2} landscape>
       <div className="sheet-head">
         <h2>{lang ? "متابعة التقويم النوعي — اللغات" : "متابعة التقويم النوعي — جميع المواد"}</h2>
         <div className="sheet-fields">
@@ -66,7 +77,7 @@ export function FollowForm({ cls, term, lang }: { cls: SchoolClass; term: string
           ))}
         </tbody>
       </table>
-    </div>
+    </Sheet>
   );
 }
 
@@ -76,7 +87,7 @@ export function MarksForm({ cls, term, lang }: { cls: SchoolClass; term: string;
     : ["اختبارات قصيرة 10%", "اختبار نصف الفصل 20%", "اختبارات قصيرة 10%", "التقويم النوعي 20%", "اختبار نهاية الفصل 40%"];
   const weights = lang ? [15, 30, 15, 30, 60, 150] : [10, 20, 10, 20, 40, 100];
   return (
-    <div className="sheet">
+    <Sheet rows={cls.students.length + 3} landscape={false}>
       <div className="sheet-head">
         <h2>{lang ? "كشف علامات اللغات" : "كشف علامات الطلبة"}</h2>
         <div className="sheet-fields">
@@ -107,7 +118,7 @@ export function MarksForm({ cls, term, lang }: { cls: SchoolClass; term: string;
           ))}
         </tbody>
       </table>
-    </div>
+    </Sheet>
   );
 }
 
@@ -115,7 +126,7 @@ export function AbsenceForm({ cls, term, month, teacher }: { cls: SchoolClass; t
   const days = monthDays(month.year, month.num);
   const dc = (d: (typeof days)[number]) => (d.outside ? "day-out" : d.weekend ? "day-weekend" : "");
   return (
-    <div className="sheet sheet-absence">
+    <Sheet rows={cls.students.length + 5} landscape extra="sheet-absence">
       <div className="sheet-head">
         <h2>جدول الحضور</h2>
         <div className="sheet-fields">
@@ -160,6 +171,6 @@ export function AbsenceForm({ cls, term, month, teacher }: { cls: SchoolClass; t
           </tr>
         </tbody>
       </table>
-    </div>
+    </Sheet>
   );
 }

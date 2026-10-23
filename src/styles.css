@@ -181,6 +181,7 @@ body { font-family: var(--font-sans); }
 .sheet-table .col-group { @apply text-[0.68rem] leading-tight; max-width: 7rem; }
 .sheet-table .col-sum { background: oklch(0.95 0 0); }
 .sheet-absence .sheet-table td:not(.cell-name), .sheet-absence .sheet-table th:not(.col-name) { min-width: 1.35rem; }
+.sheet-footer { @apply mt-2 text-start text-[0.65rem] text-muted-foreground; font-family: var(--font-sans); direction: ltr; }
 .day-weekend { background: var(--weekend) !important; }
 .day-out { background: repeating-linear-gradient(45deg, var(--paper) 0 3px, var(--weekend) 3px 4px) !important; }
 .day-name span { writing-mode: vertical-rl; display: inline-block; font-size: 0.6rem; height: 3.2rem; }
@@ -189,10 +190,17 @@ body { font-family: var(--font-sans); }
   .no-print { display: none !important; }
   body, .app-shell { background: var(--paper); padding: 0; margin: 0; max-width: none; }
   .paper-wrap { margin: 0; overflow: visible; }
-  .sheet { box-shadow: none; padding: 0; width: 100%; }
-  .sheet-table { font-size: 0.62rem; }
-  .sheet-table th, .sheet-table td { height: 1.2rem; }
+  .sheet { box-shadow: none; padding: 0; width: 100%; min-width: 0; display: flex; flex-direction: column; overflow: hidden; break-after: avoid; break-inside: avoid; }
+  .sheet-landscape { --page-h: 192mm; height: 192mm; }
+  .sheet-portrait { --page-h: 279mm; height: 279mm; }
+  .sheet-head { margin-bottom: 2mm; }
+  .sheet-head h2 { font-size: 13pt; margin-bottom: 1mm; }
+  .sheet-fields { font-size: 9pt; }
+  .sheet-table { font-size: min(9pt, calc((var(--page-h) - 30mm) / var(--rows) * 0.62)); table-layout: auto; }
+  .sheet-table tbody td, .sheet-table thead tr { height: calc((var(--page-h) - 30mm) / var(--rows)); padding-block: 0; line-height: 1; }
+  .sheet-table .col-name, .sheet-table .cell-name { min-width: 0; }
+  .sheet-absence .sheet-table td:not(.cell-name), .sheet-absence .sheet-table th:not(.col-name) { min-width: 0; }
+  .day-name span { height: auto; font-size: 6pt; writing-mode: vertical-rl; }
+  .sheet-footer { margin-top: auto; padding-top: 1mm; font-size: 7pt; color: var(--ink); }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  thead { display: table-header-group; }
-  tr { break-inside: avoid; }
 }
