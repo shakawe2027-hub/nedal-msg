@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { useBulkExport, type ExportJob } from "@/components/bulk-export";
 import { getSchoolData } from "@/lib/school.functions";
 import { AbsenceForm, FollowForm, MarksForm, FORM_LABELS, type FormKind } from "@/components/forms";
 
@@ -46,11 +47,35 @@ function Index() {
     ? data.classes.find((c) => c.key === teacher?.classKey)
     : data.classes.find((c) => c.key === classKey);
   const month = data.months[monthIdx];
+  const bulk = useBulkExport();
+  const termList = data.terms.length ? data.terms : ["الأول", "الثاني"];
+  const termFor = (num: number) => (num >= 8 ? termList[0] : termList[1] ?? termList[0]) ?? "";
+  const exportClasses = (k: FormKind) => {
+    const lang = k.endsWith("lang");
+    const jobs: ExportJob[] = data.classes
+      .filter((c) => !lang || c.grade >= 11)
+      .map((c) => ({
+        key: k + c.key,
+        landscape: k.startsWith("follow"),
+        node: k.startsWith("follow") ? <FollowForm cls={c} term={term} lang={lang} /> : <MarksForm cls={c} term={term} lang={lang} />,
+      }));
+    bulk.start(jobs, `${FORM_LABELS[k]}.pdf`);
+  };
+  const exportAbsence = () => {
+    const jobs: ExportJob[] = [];
+    for (const t of data.teachers) {
+      const c = data.classes.find((x) => x.key === t.classKey);
+      if (!c) continue;
+      for (const m of data.months)
+        jobs.push({ key: t.classKey + m.year + m.num, landscape: true, node: <AbsenceForm cls={c} term={termFor(m.num)} month={m} teacher={t.name} /> });
+    }
+    bulk.start(jobs, "نماذج غياب الطلاب.pdf");
+  };
   const landscape = kind === "absence" || kind.startsWith("follow");
 
   return (
     <div className="app-shell" dir="rtl">
-      <style>{`@page { size: A4 ${landscape ? "landscape" : "portrait"}; margin: 8mm; }`}</style>
+      {!bulk.busy && <style>{`@page { size: A4 ${landscape ? "landscape" : "portrait"}; margin: 8mm; }`}</style>}
       <header className="no-print app-header">
         <div>
           <p className="app-kicker">ملف n2028 · Google Drive</p>
@@ -99,9 +124,17 @@ function Index() {
           </label>
           <button className="btn-print" onClick={() => window.print()} disabled={!cls}>طباعة</button>
         </div>
+        <div className="bulk-bar">
+          {(["follow-all", "follow-lang", "marks-all", "marks-lang"] as FormKind[]).map((k) => (
+            <button key={k} className="btn-bulk" disabled={bulk.busy} onClick={() => exportClasses(k)}>{FORM_LABELS[k]} PDF</button>
+          ))}
+          <button className="btn-bulk-main" disabled={bulk.busy} onClick={exportAbsence}>نماذج غياب الطلاب PDF</button>
+          {bulk.busy && <span className="hint mt-0">جارٍ تجهيز {bulk.progress} صفحة… اختر "حفظ كملف PDF" في نافذة الطباعة</span>}
+        </div>
         {cls && <p className="hint">{cls.students.length} طالباً في {cls.title}</p>}
       </section>
 
+      {bulk.stage}
       <main className="paper-wrap">
         {!cls ? (
           <p className="hint no-print">لا توجد ورقة أسماء مطابقة لهذا الاختيار.</p>

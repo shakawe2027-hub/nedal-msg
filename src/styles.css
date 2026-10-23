@@ -204,3 +204,14 @@ body { font-family: var(--font-sans); }
   .sheet-footer { margin-top: auto; padding-top: 1mm; font-size: 7pt; color: var(--ink); }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+.bulk-stage { display: none; }
+@media print {
+  body.bulk-printing .app-shell > :not(.bulk-stage) { display: none !important; }
+  body.bulk-printing .bulk-stage { display: block; }
+  .bulk-page { break-after: page; }
+  .bulk-page:last-child { break-after: auto; }
+}
+.bulk-bar { @apply mt-5 flex flex-wrap items-center gap-2 border-t pt-4; }
+.btn-bulk { @apply rounded-md border border-primary px-3 py-2 text-sm text-primary hover:bg-accent disabled:opacity-40; }
+.btn-bulk-main { @apply rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-40; }
