@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as InRouteImport } from './routes/in'
 import { Route as OutRouteImport } from './routes/out'
+import { Route as ReportsRouteImport } from './routes/reports'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,35 +29,44 @@ const OutRoute = OutRouteImport.update({
   path: '/out',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/in': typeof InRoute
   '/out': typeof OutRoute
+  '/reports': typeof ReportsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/in': typeof InRoute
   '/out': typeof OutRoute
+  '/reports': typeof ReportsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/in': typeof InRoute
   '/out': typeof OutRoute
+  '/reports': typeof ReportsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/in' | '/out'
+  fullPaths: '/' | '/in' | '/out' | '/reports'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/in' | '/out'
-  id: '__root__' | '/' | '/in' | '/out'
+  to: '/' | '/in' | '/out' | '/reports'
+  id: '__root__' | '/' | '/in' | '/out' | '/reports'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   InRoute: typeof InRoute
   OutRoute: typeof OutRoute
+  ReportsRoute: typeof ReportsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   InRoute: InRoute,
   OutRoute: OutRoute,
+  ReportsRoute: ReportsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

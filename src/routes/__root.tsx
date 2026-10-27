@@ -11,6 +11,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import { Toaster } from "../components/ui/sonner";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -78,8 +79,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "نماذج الصفوف للطباعة" },
-      { name: "description", content: "نماذج متابعة وعلامات وغياب للطباعة" },
+      { title: "nedal.MSG — نظام المراسلات" },
+      { name: "description", content: "نظام إدارة المراسلات الواردة والصادرة" },
     ],
     links: [
       {
@@ -88,7 +89,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;700&family=Noto+Naskh+Arabic:wght@400;700&display=swap" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" },
     ],
   }),
   shellComponent: RootShell,
@@ -118,6 +119,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      <Toaster position="top-center" richColors dir="rtl" />
     </QueryClientProvider>
   );
 }
