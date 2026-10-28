@@ -1,10 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState, type ReactNode } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { Archive, Download, FileDown, Paperclip, Pencil, Printer, X, KeyRound, MailOpen } from "lucide-react";
-import { closeYear, login, updateRecord } from "@/lib/msg.functions";
+import { closeYear, login, updateRecord, readAttachment } from "@/lib/msg.functions";
 import { saveSession, useMsgData, type Session } from "@/lib/session";
 import { driveFileId, IN_HEADER, OUT_HEADER, type InRec, type Kind, type OutRec } from "@/lib/msg";
 import { Shell, Signature } from "@/components/msg/shell";
@@ -59,14 +59,15 @@ function AdminPrompt({ session }: { session: Session }) {
 
 type Row = { kind: Kind; archive: string | null; r: InRec | OutRec };
 
-function Reports({ session }: { session: Session }) {
+export function Reports({ session, onlyKind, archivesOnly = false }: { session: Session; onlyKind?: Kind; archivesOnly?: boolean }) {
   const q = useMsgData(session.code);
   const qc = useQueryClient();
-  const [kind, setKind] = useState<"all" | Kind>("all");
+  const [kind, setKind] = useState<"all" | Kind>(onlyKind ?? "all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [auth, setAuth] = useState("");
   const [sender, setSender] = useState("");
+  const [orientation, setOrientation] = useState("landscape");
   const [search, setSearch] = useState("");
   const [view, setView] = useState<Row | null>(null);
   const [edit, setEdit] = useState<Row | null>(null);
@@ -75,8 +76,8 @@ function Reports({ session }: { session: Session }) {
     const out: Row[] = [];
     for (const [k, book] of [["in", q.data?.in], ["out", q.data?.out]] as const) {
       if (!book) continue;
-      for (const r of book.active) out.push({ kind: k, archive: null, r });
-      for (const a of book.archives) for (const r of a.rows) out.push({ kind: k, archive: a.label, r });
+      if (!archivesOnly) for (const r of book.active) out.push({ kind: k, archive: null, r });
+      if (archivesOnly) for (const a of book.archives) for (const r of a.rows) out.push({ kind: k, archive: a.label, r });
     }
     return out;
   }, [q.data]);
@@ -87,8 +88,8 @@ function Reports({ session }: { session: Session }) {
         if (kind !== "all" && k !== kind) return false;
         if (from && r.date < from) return false;
         if (to && r.date > to) return false;
-        if (auth && k === "out" && (r as OutRec).authority !== auth) return false;
-        if (sender && k === "in" && (r as InRec).sender !== sender) return false;
+        if (auth && (k !== "out" || (r as OutRec).authority !== auth)) return false;
+        if (sender && (k !== "in" || (r as InRec).sender !== sender)) return false;
         if (search && ![r.subject, r.fileNo, r.date].some((x) => x.includes(search))) return false;
         return true;
       }),
@@ -116,8 +117,8 @@ function Reports({ session }: { session: Session }) {
   }, [rows]);
 
   const exportXlsx = (k: Kind) => {
-    const list = rows.filter((x) => x.kind === k).map(({ r }) => r);
-    const ws = XLSX.utils.json_to_sheet(list, { header: ["serial", "fileNo", "date", "subject", ...(k === "in" ? ["sender", "unit", "action", "notes"] : ["authority", "enclosures"]), "attachment"] });
+    const list = filtered.filter((x) => x.kind === k).map(({ r }) => r);
+    const ws = XLSX.utils.json_to_sheet(list, { header: ["serial", "fileNo", "date", "subject", ...(k === "in" ? ["sender", "unit", "action", "notes", "status", "reminderDate"] : ["authority", "enclosures"]), "attachment"] });
     ws["!cols"] = Array(10).fill({ wch: 22 });
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, k === "in" ? "الوارد" : "الصادر");
@@ -127,7 +128,9 @@ function Reports({ session }: { session: Session }) {
   const doCloseYear = async () => {
     if (!confirm("سيتم أرشفة كل المراسلات الحالية والبدء بأرقام متسلسلة جديدة للعام القادم. متابعة؟")) return;
     try {
-      const r = await closeYear({ data: { code: session.code } });
+      const archiveCode = prompt("أدخل رقم الأرشفة");
+      if (!archiveCode) return;
+      const r = await closeYear({ data: { code: session.code, archiveCode } });
       toast.success(`تمت الأرشفة: ${r.archived} — العام الجديد ${r.year}`);
       qc.invalidateQueries({ queryKey: ["msg"] });
     } catch (e) {
@@ -140,24 +143,26 @@ function Reports({ session }: { session: Session }) {
 
   const L = q.data.lists;
   return (
-    <div className="reports">
+    <div className={`reports ${onlyKind ? "register" : "reports-dark"}`}>
+      <style>{`@page { size: A4 ${orientation}; margin: 12mm; }`}</style>
       <div className="sheet-card-head no-print">
         <div className="sheet-card-title"><span className="icon-chip"><MailOpen /></span><div><h1>تقارير الصادر والوارد</h1><p className="muted">نظام n.MSG · العام {L.year}</p></div></div>
         <div className="row-gap">
           <button className="btn btn-ghost" onClick={() => exportXlsx("in")}><FileDown /> تصدير الوارد Excel</button>
           <button className="btn btn-ghost" onClick={() => exportXlsx("out")}><FileDown /> تصدير الصادر Excel</button>
-          <button className="btn btn-gold" onClick={doCloseYear}><Archive /> إنهاء العام {L.year} وأرشفته</button>
+          {session.role === "admin" && !onlyKind && <Link className="btn btn-ghost" to="/archives">أرشيف الأعوام السابقة</Link>}
+          {session.role === "admin" && !onlyKind && <button className="btn btn-gold" onClick={doCloseYear}><Archive /> إنهاء العام {L.year} وأرشفته</button>}
         </div>
       </div>
 
-      <div className="stats no-print">
+      {!onlyKind && <div className="stats no-print">
         <Stat n={stats.inN} t="مراسلة واردة" />
         <Stat n={stats.outN} t="كتاب صادر" />
         <Stat n={stats.attN} t="مرفق مخزن" />
         <Stat n={stats.archN} t="مراسلة مؤرشفة" />
         <div className="stat stat-list"><b>أكثر جهات الاختصاص</b>{stats.topAuth.map(([n, c]) => <span key={n} className="stat-item">{n} <i>{c}</i></span>)}</div>
         <div className="stat stat-list"><b>أكثر الجهات إرسالاً</b>{stats.topSender.map(([n, c]) => <span key={n} className="stat-item">{n} <i>{c}</i></span>)}</div>
-      </div>
+      </div>}
 
       <div className="filters no-print">
         <select className="input" value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
@@ -172,6 +177,8 @@ function Reports({ session }: { session: Session }) {
           <option value="">كل الجهات المرسلة</option>{L.authorities.map((a) => <option key={a}>{a}</option>)}
         </select>
         <input className="input" placeholder="بحث بالمبحث أو رقم الملف" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <select className="input" aria-label="اتجاه الطباعة" value={orientation} onChange={(e) => setOrientation(e.target.value)}><option value="portrait">بالطول</option><option value="landscape">بالعرض</option></select>
+        <button className="btn btn-ghost" onClick={() => setKind("in")}>البحث عن الوارد</button><button className="btn btn-ghost" onClick={() => setKind("out")}>البحث عن الصادر</button><button className="btn btn-ghost" onClick={() => setKind("all")}>البحث عن الصادر والوارد</button>
         <button className="btn btn-primary" onClick={() => window.print()}><Printer /> طباعة التقرير</button>
       </div>
 
@@ -201,7 +208,7 @@ function Reports({ session }: { session: Session }) {
         </table>
       </div>
 
-      {view && <Viewer row={view} onClose={() => setView(null)} />}
+      {view && <Viewer code={session.code} row={view} onClose={() => setView(null)} />}
       {edit && <EditModal session={session} row={edit} onClose={(changed) => { setEdit(null); if (changed) qc.invalidateQueries({ queryKey: ["msg"] }); }} />}
     </div>
   );
@@ -212,7 +219,7 @@ function Stat({ n, t }: { n: number; t: string }) {
 }
 
 /** Centered attachment preview (Drive) with the record's data to the side. */
-function Viewer({ row, onClose }: { row: Row; onClose: () => void }) {
+function Viewer({ code, row, onClose }: { code: string; row: Row; onClose: () => void }) {
   const id = driveFileId(row.r.attachment);
   const fields: [string, string][] =
     row.kind === "in"
@@ -228,7 +235,7 @@ function Viewer({ row, onClose }: { row: Row; onClose: () => void }) {
           <button className="btn btn-ghost" onClick={onClose}><X /> إغلاق</button>
         </aside>
         <div className="viewer-body">
-          {id ? <iframe title="معاينة المرفق" src={`https://drive.google.com/file/d/${id}/preview`} /> : <p className="muted">لا يمكن معاينة هذا الرابط</p>}
+          {id ? <PrivatePreview id={id} code={code} /> : <p className="muted">لا يمكن معاينة هذا الرابط</p>}
         </div>
       </div>
     </div>
@@ -237,10 +244,10 @@ function Viewer({ row, onClose }: { row: Row; onClose: () => void }) {
 
 function EditModal({ session, row, onClose }: { session: Session; row: Row; onClose: (changed: boolean) => void }) {
   const isIn = row.kind === "in";
-  const [f, setF] = useState<Record<string, string>>({ ...row.r, serial: undefined } as never);
+  const [f, setF] = useState<Record<string, string>>(() => Object.fromEntries(Object.entries(row.r).filter(([k,v]) => !["serial","year","institution"].includes(k) && typeof v === "string")) );
   const [busy, setBusy] = useState(false);
-  const keys = isIn ? ["fileNo", "date", "subject", "sender", "unit", "action", "notes"] : ["fileNo", "date", "subject", "authority", "enclosures"];
-  const labels: Record<string, string> = { fileNo: "رقم الملف", date: "التاريخ", subject: "المبحث", sender: "الجهة/القسم - المرسل", unit: "المديرية/الوحدة", action: "اجراء", notes: "ملاحظات المسؤول", authority: "جهة الاختصاص", enclosures: "الملحقات" };
+  const keys = isIn ? ["fileNo", "date", "subject", "sender", "unit", "action", "notes", "status", "reminderDate"] : ["fileNo", "date", "subject", "authority", "enclosures"];
+  const labels: Record<string, string> = { fileNo: "رقم الملف", date: "التاريخ", subject: "المبحث", sender: "الجهة/القسم - المرسل", unit: "المديرية/الوحدة", action: "اجراء", notes: "ملاحظات المسؤول", authority: "جهة الاختصاص", enclosures: "الملحقات", status: "حالة المتابعة", reminderDate: "تاريخ التنبيه" };
   return (
     <div className="modal-back" onClick={() => onClose(false)}>
       <div className="modal modal-sm" dir="rtl" onClick={(e) => e.stopPropagation()}>
@@ -303,4 +310,24 @@ function PrintReport({ rows, title, year }: { rows: Row[]; title: string; year: 
       <Signature />
     </div>
   );
+}
+
+function PrivatePreview({ id, code }: { id: string; code: string }) {
+  const [src, setSrc] = useState("");
+  const [type, setType] = useState("");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let url = "";
+    readAttachment({ data: { id, code } }).then((r) => {
+      const bytes = Uint8Array.from(atob(r.base64), (c) => c.charCodeAt(0));
+      url = URL.createObjectURL(new Blob([bytes], { type: r.type }));
+      setSrc(url); setType(r.type);
+    }).catch((e) => setError(e.message));
+    return () => { if (url) URL.revokeObjectURL(url); };
+  }, [id, code]);
+  if (error) return <p>{error}</p>;
+  if (!src) return <p>جارٍ تحميل المرفق…</p>;
+  if (type.startsWith("image/")) return <img className="attachment-image" src={src} alt="الكتاب المرفق" />;
+  if (type.includes("pdf")) return <iframe src={src} title="المرفق" />;
+  return <a className="btn btn-primary" href={src} download>تنزيل المرفق لفتحه</a>;
 }
