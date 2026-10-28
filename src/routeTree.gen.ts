@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ArchivesRouteImport } from './routes/archives'
 import { Route as InRouteImport } from './routes/in'
 import { Route as OutRouteImport } from './routes/out'
 import { Route as ReportsRouteImport } from './routes/reports'
@@ -17,6 +18,11 @@ import { Route as ReportsRouteImport } from './routes/reports'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArchivesRoute = ArchivesRouteImport.update({
+  id: '/archives',
+  path: '/archives',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InRoute = InRouteImport.update({
@@ -37,12 +43,14 @@ const ReportsRoute = ReportsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/archives': typeof ArchivesRoute
   '/in': typeof InRoute
   '/out': typeof OutRoute
   '/reports': typeof ReportsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/archives': typeof ArchivesRoute
   '/in': typeof InRoute
   '/out': typeof OutRoute
   '/reports': typeof ReportsRoute
@@ -50,20 +58,22 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/archives': typeof ArchivesRoute
   '/in': typeof InRoute
   '/out': typeof OutRoute
   '/reports': typeof ReportsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/in' | '/out' | '/reports'
+  fullPaths: '/' | '/archives' | '/in' | '/out' | '/reports'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/in' | '/out' | '/reports'
-  id: '__root__' | '/' | '/in' | '/out' | '/reports'
+  to: '/' | '/archives' | '/in' | '/out' | '/reports'
+  id: '__root__' | '/' | '/archives' | '/in' | '/out' | '/reports'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ArchivesRoute: typeof ArchivesRoute
   InRoute: typeof InRoute
   OutRoute: typeof OutRoute
   ReportsRoute: typeof ReportsRoute
@@ -76,6 +86,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/archives': {
+      id: '/archives'
+      path: '/archives'
+      fullPath: '/archives'
+      preLoaderRoute: typeof ArchivesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/in': {
@@ -104,6 +121,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ArchivesRoute: ArchivesRoute,
   InRoute: InRoute,
   OutRoute: OutRoute,
   ReportsRoute: ReportsRoute,

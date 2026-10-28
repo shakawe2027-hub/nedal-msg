@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { Inbox, Send, BarChart3, LogOut, Mail } from "lucide-react";
+import { ClockBar } from "./clock";
 import { saveSession, useSession, type Session } from "@/lib/session";
 
 export function Brand({ big }: { big?: boolean }) {
@@ -35,6 +36,7 @@ export function Shell({ children }: { children: (s: Session) => ReactNode }) {
         </nav>
         <button className="topnav-link" onClick={() => { saveSession(null); nav({ to: "/" }); }}><LogOut /> خروج</button>
       </header>
+      <ClockBar />
       <main className="shell-main">{children(session)}</main>
       <footer className="shell-foot no-print"><Signature /></footer>
     </div>
