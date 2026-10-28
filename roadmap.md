@@ -9,3 +9,11 @@ Previous school-forms app: to be removed (user asked to delete everything) — r
 - [ ] Preview page: stats, edit any record, add action/notes, attachment viewer centered, Excel export
 - [ ] Year-end archive button: restart serials, archive old under "مراسلات منتهية-أرشيف 2026/2027"
 - [ ] Formal elegant color theme, correspondence iconography
+
+## Latest changes
+- [ ] Login: correspondence image; version v.010.2026, إعداد وتصميم نضال قزاز; clock/year/institution across pages
+- [ ] Incoming/outgoing: register lists, edit/preview, date-filtered print/Excel, incoming optional follow-up status/date, last outgoing strip
+- [ ] Letterhead from Drive الترويسة: editable multipage outgoing document
+- [ ] Reports black screen theme, uncolored print, orientation/search controls, archive-years page
+- [ ] Archive requires data-sheet archive code; uses next listed school year (not calculated); frozen year saved in in/out rows
+- [ ] Upload into الوارد/الصادر folders, named with subject/year
