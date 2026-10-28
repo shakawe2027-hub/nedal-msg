@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Inbox, Send, Archive, Stamp, KeyRound } from "lucide-react";
+import { KeyRound } from "lucide-react";
 import { login } from "@/lib/msg.functions";
 import { saveSession } from "@/lib/session";
+import correspondence from "@/assets/correspondence.jpg";
+import { ClockBar } from "@/components/msg/clock";
 import { Brand, Signature } from "@/components/msg/shell";
 
 export const Route = createFileRoute("/")({
@@ -46,21 +48,16 @@ function LoginPage() {
         <div className="login-art-inner">
           <Brand big />
           <p className="login-tag">نظام إدارة المراسلات الرسمية</p>
-          <ul className="login-feats">
-            <li><Inbox /> تسجيل البريد الوارد بترقيم تلقائي</li>
-            <li><Send /> إصدار الكتب الصادرة وملحقاتها</li>
-            <li><Stamp /> تقارير حسب التاريخ والجهة</li>
-            <li><Archive /> أرشفة سنوية للمراسلات المنتهية</li>
-          </ul>
+          <p className="version-label">النسخة الحالية ( v.010.2026)</p>
+          <p>إعداد وتصميم نضال قزاز</p>
         </div>
-        <div className="login-envelope" aria-hidden>
-          <span /><span /><span />
-        </div>
+        <img className="login-photo" src={correspondence} alt="مراسلات إدارية ومستندات رسمية" width={1536} height={1024} />
       </aside>
       <section className="login-panel">
+        <ClockBar />
         <form className="login-card" onSubmit={submit}>
           <span className="login-key"><KeyRound /></span>
-          <h1>تسجيل الدخول</h1>
+          <h1>نظام nedal.MSG</h1>
           <p className="muted">أدخل الرقم الوطني، أو رمز صفحة المعاينة</p>
           <input className="input input-lg" inputMode="numeric" autoFocus value={code} onChange={(e) => setCode(e.target.value)} placeholder="الرقم الوطني" />
           {err && <p className="err">{err}</p>}
