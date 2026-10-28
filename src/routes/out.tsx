@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Send } from "lucide-react";
 import { addOut, uploadAttachment } from "@/lib/msg.functions";
 import { useMsgData, type Session } from "@/lib/session";
+import { Reports } from "@/components/msg/register";
 import { Shell } from "@/components/msg/shell";
 import { Combo, Field, FilePick, SerialBadge, today } from "@/components/msg/fields";
 
@@ -22,12 +23,12 @@ export const Route = createFileRoute("/out")({
   component: () => <Shell>{(s) => <OutForm session={s} />}</Shell>,
 });
 
-const empty = { fileNo: "", date: today(), subject: "", authority: "", enclosures: "" };
+const empty = { fileNo: "", date: "", subject: "", authority: "", enclosures: "" };
 
 function OutForm({ session }: { session: Session }) {
   const q = useMsgData(session.code);
   const qc = useQueryClient();
-  const [f, setF] = useState(empty);
+  const [f, setF] = useState(() => ({ ...empty, date: today() }));
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof empty) => (v: string) => setF((p) => ({ ...p, [k]: v }));
@@ -42,6 +43,7 @@ function OutForm({ session }: { session: Session }) {
         fd.set("code", session.code);
         fd.set("subject", f.subject);
         fd.set("file", file);
+        fd.set("kind", "out");
         attachment = (await uploadAttachment({ data: fd })).link;
       }
       const { serial } = await addOut({ data: { code: session.code, rec: { ...f, attachment } } });
@@ -57,8 +59,11 @@ function OutForm({ session }: { session: Session }) {
   };
 
   const L = q.data?.lists;
+  const last = q.data?.out?.active.at(-1);
   return (
-    <form className="sheet-card" onSubmit={submit}>
+    <div className="entry-stack">
+    {last && <div className="last-out no-print">آخر صادر: #{last.serial} · {last.date} · {last.subject}</div>}
+    <form className="sheet-card no-print" onSubmit={submit}>
       <div className="sheet-card-head">
         <div className="sheet-card-title"><span className="icon-chip icon-chip-gold"><Send /></span><div><h1>nedal.MSG.OUT</h1><p className="muted">الكتب الصادرة {L?.year && `· العام ${L.year}`}</p></div></div>
         <SerialBadge label="الرقم الصادر" value={q.data?.nextOut ?? "…"} />
@@ -76,5 +81,7 @@ function OutForm({ session }: { session: Session }) {
         <button className="btn btn-gold" disabled={busy || !q.data}>{busy ? "جارٍ الحفظ…" : "حفظ الصادر"}</button>
       </div>
     </form>
+    <Reports session={session} onlyKind="out" />
+    </div>
   );
 }
