@@ -17,3 +17,4 @@ Previous school-forms app: to be removed (user asked to delete everything) — r
 - [ ] Reports black screen theme, uncolored print, orientation/search controls, archive-years page
 - [ ] Archive requires data-sheet archive code; uses next listed school year (not calculated); frozen year saved in in/out rows
 - [ ] Upload into الوارد/الصادر folders, named with subject/year
+- [ ] Latest design: restore original login arrangement with renewed visual style; distinctive incoming/outgoing pages; replace black reports with attractive light theme
