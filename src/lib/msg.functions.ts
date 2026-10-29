@@ -6,17 +6,45 @@ import {
   type Book, type InRec, type Kind, type Lists, type OutRec,
 } from "./msg";
 
-const API = "https://connector-gateway.lovable.dev/google_drive";
+const LOVABLE_API = "https://connector-gateway.lovable.dev/google_drive";
+const GOOGLE_API = "https://www.googleapis.com";
 const FOLDER_NAME = "nedal.MSG - مرفقات";
 
-function headers(extra?: Record<string, string>) {
+/** Direct Google OAuth (used outside Lovable, e.g. on Netlify): access token cached until shortly before expiry. */
+let token: { value: string; exp: number } | null = null;
+async function googleToken() {
+  if (token && token.exp > Date.now()) return token.value;
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: process.env["GOOGLE_CLIENT_ID"] ?? "",
+      client_secret: process.env["GOOGLE_CLIENT_SECRET"] ?? "",
+      refresh_token: process.env["GOOGLE_REFRESH_TOKEN"] ?? "",
+      grant_type: "refresh_token",
+    }),
+  });
+  if (!res.ok) {
+    console.error(`Google OAuth [${res.status}]: ${await res.text()}`);
+    throw new Error(`تعذر تسجيل الدخول إلى جوجل درايف [${res.status}]`);
+  }
+  const j = (await res.json()) as { access_token: string; expires_in: number };
+  token = { value: j.access_token, exp: Date.now() + (j.expires_in - 60) * 1000 };
+  return token.value;
+}
+
+async function connection(extra?: Record<string, string>) {
   const a = process.env["LOVABLE_API_KEY"];
   const b = process.env["GOOGLE_DRIVE_API_KEY"];
-  if (!a || !b) throw new Error("جوجل درايف غير مربوط");
-  return { Authorization: `Bearer ${a}`, "X-Connection-Api-Key": b, ...extra };
+  if (a && b) return { api: LOVABLE_API, headers: { Authorization: `Bearer ${a}`, "X-Connection-Api-Key": b, ...extra } };
+  if (process.env["GOOGLE_CLIENT_ID"] && process.env["GOOGLE_CLIENT_SECRET"] && process.env["GOOGLE_REFRESH_TOKEN"]) {
+    return { api: GOOGLE_API, headers: { Authorization: `Bearer ${await googleToken()}`, ...extra } };
+  }
+  throw new Error("جوجل درايف غير مربوط");
 }
 async function drive(path: string, init: RequestInit = {}) {
-  const res = await fetch(`${API}${path}`, { ...init, headers: headers(init.headers as Record<string, string>) });
+  const c = await connection(init.headers as Record<string, string>);
+  const res = await fetch(`${c.api}${path}`, { ...init, headers: c.headers });
   if (!res.ok) {
     const t = await res.text();
     console.error(`Drive [${res.status}] ${path}: ${t}`);
