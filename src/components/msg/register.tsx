@@ -131,10 +131,10 @@ export function Reports({ session, onlyKind, archivesOnly = false }: { session: 
 
   const L = q.data.lists;
   return (
-    <div className={`reports ${onlyKind ? "register" : "reports-dark"}`}>
+    <div className={`reports ${onlyKind ? "register" : "reports-light"}`}>
       <style>{`@page { size: A4 ${orientation}; margin: 12mm; }`}</style>
       <div className="sheet-card-head no-print">
-        <div className="sheet-card-title"><span className="icon-chip"><MailOpen /></span><div><h1>تقارير الصادر والوارد</h1><p className="muted">نظام n.MSG · العام {L.year}</p></div></div>
+        <div className="sheet-card-title"><span className="icon-chip"><MailOpen /></span><div><h1>{onlyKind === "in" ? "سجل المراسلات الواردة" : onlyKind === "out" ? "سجل الكتب الصادرة" : archivesOnly ? "أرشيف الأعوام السابقة" : "المعاينة والتقارير"}</h1><p className="muted">نظام n.MSG · العام {L.year}</p></div></div>
         <div className="row-gap">
           <button className="btn btn-ghost" onClick={() => exportXlsx("in")}><FileDown /> تصدير الوارد Excel</button>
           <button className="btn btn-ghost" onClick={() => exportXlsx("out")}><FileDown /> تصدير الصادر Excel</button>
@@ -232,7 +232,7 @@ function Viewer({ code, row, onClose }: { code: string; row: Row; onClose: () =>
 
 function EditModal({ session, row, onClose }: { session: Session; row: Row; onClose: (changed: boolean) => void }) {
   const isIn = row.kind === "in";
-  const [f, setF] = useState<Record<string, string>>(() => Object.fromEntries(Object.entries(row.r).filter(([k,v]) => !["serial","year","institution"].includes(k) && typeof v === "string")) );
+  const [f, setF] = useState<Record<string, string>>(() => Object.fromEntries(Object.entries(row.r).flatMap(([k,v]) => !["serial","year","institution"].includes(k) && typeof v === "string" ? [[k, v]] : [])) );
   const [busy, setBusy] = useState(false);
   const keys = isIn ? ["fileNo", "date", "subject", "sender", "unit", "action", "notes", "status", "reminderDate"] : ["fileNo", "date", "subject", "authority", "enclosures"];
   const labels: Record<string, string> = { fileNo: "رقم الملف", date: "التاريخ", subject: "المبحث", sender: "الجهة/القسم - المرسل", unit: "المديرية/الوحدة", action: "اجراء", notes: "ملاحظات المسؤول", authority: "جهة الاختصاص", enclosures: "الملحقات", status: "حالة المتابعة", reminderDate: "تاريخ التنبيه" };

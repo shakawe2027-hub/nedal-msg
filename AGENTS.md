@@ -9,4 +9,5 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- School data is read live from the Drive file n2028.xlsx via a server function (src/lib/school.functions.ts) parsed with SheetJS; no database — the spreadsheet stays the single source of truth.
+- Correspondence data is read and written through Drive-backed server functions using SheetJS; the workbook is the single source of truth without a database.
+- Incoming/outgoing pages reuse the shared register and workspace-summary components so presentation stays consistent with reports.

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Inbox } from "lucide-react";
 import { addIn, uploadAttachment } from "@/lib/msg.functions";
 import { useMsgData, type Session } from "@/lib/session";
+import { WorkspaceSummary } from "@/components/msg/workspace-summary";
 import { Reports } from "@/components/msg/register";
 import { Shell } from "@/components/msg/shell";
 import { Combo, Field, FilePick, SerialBadge, today } from "@/components/msg/fields";
@@ -60,7 +61,8 @@ function InForm({ session }: { session: Session }) {
 
   const L = q.data?.lists;
   return (
-    <div className="entry-stack">
+    <div className="entry-stack entry-in">
+    <WorkspaceSummary rows={q.data?.in?.active ?? []} incoming={true} />
     <form className="sheet-card no-print" onSubmit={submit}>
       <div className="sheet-card-head">
         <div className="sheet-card-title"><span className="icon-chip"><Inbox /></span><div><h1>nedal.MSG.IN</h1><p className="muted">المراسلات الواردة {L?.year && `· العام ${L.year}`}</p></div></div>
