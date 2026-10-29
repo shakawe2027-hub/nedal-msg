@@ -335,3 +335,10 @@ body:has(.reports-light) { background: var(--background); }
  .sheet-card-head .row-gap { width: 100%; }
 }
 @media print { .page-summary { display: none; } .reports-light { padding: 0; background: var(--print-paper); } }
+
+/* Distinctive gold brand name */
+:root { --brand-gold: oklch(0.76 0.13 82); --brand-gold-deep: oklch(0.6 0.12 70); }
+.brand-name, .brand-name span, .login-art .brand-name, .login-art .brand-name span {
+  background: linear-gradient(135deg, var(--brand-gold), var(--brand-gold-deep));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
