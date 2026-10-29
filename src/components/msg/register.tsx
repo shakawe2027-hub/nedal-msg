@@ -232,7 +232,7 @@ function Viewer({ code, row, onClose }: { code: string; row: Row; onClose: () =>
 
 function EditModal({ session, row, onClose }: { session: Session; row: Row; onClose: (changed: boolean) => void }) {
   const isIn = row.kind === "in";
-  const [f, setF] = useState<Record<string, string>>(() => Object.fromEntries(Object.entries(row.r).filter(([k,v]) => !["serial","year","institution"].includes(k) && typeof v === "string")) );
+  const [f, setF] = useState<Record<string, string>>(() => Object.fromEntries(Object.entries(row.r).flatMap(([k,v]) => !["serial","year","institution"].includes(k) && typeof v === "string" ? [[k, v]] : [])) );
   const [busy, setBusy] = useState(false);
   const keys = isIn ? ["fileNo", "date", "subject", "sender", "unit", "action", "notes", "status", "reminderDate"] : ["fileNo", "date", "subject", "authority", "enclosures"];
   const labels: Record<string, string> = { fileNo: "رقم الملف", date: "التاريخ", subject: "المبحث", sender: "الجهة/القسم - المرسل", unit: "المديرية/الوحدة", action: "اجراء", notes: "ملاحظات المسؤول", authority: "جهة الاختصاص", enclosures: "الملحقات", status: "حالة المتابعة", reminderDate: "تاريخ التنبيه" };

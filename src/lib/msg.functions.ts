@@ -150,7 +150,7 @@ export const addIn = createServerFn({ method: "POST" })
     require(L.wb, data.code, "user");
     const book = readBook(L.wb, "in");
     const serial = nextSerial(book.active);
-    book.active.push({ serial, ...data.rec, year: readData(L.wb).lists.year, institution: readData(L.wb).lists.institution });
+    book.active.push({ serial, ...data.rec, status: data.rec.status ?? "", reminderDate: data.rec.reminderDate ?? "", year: readData(L.wb).lists.year, institution: readData(L.wb).lists.institution });
     writeBook(L.wb, "in", book);
     addToList(L.wb, 3, data.rec.sender);
     addToList(L.wb, 2, data.rec.unit);
@@ -166,7 +166,7 @@ export const addOut = createServerFn({ method: "POST" })
     require(L.wb, data.code, "user");
     const book = readBook(L.wb, "out");
     const serial = nextSerial(book.active);
-    book.active.push({ serial, ...data.rec, year: readData(L.wb).lists.year, institution: readData(L.wb).lists.institution });
+    book.active.push({ serial, ...data.rec, status: data.rec.status ?? "", reminderDate: data.rec.reminderDate ?? "", year: readData(L.wb).lists.year, institution: readData(L.wb).lists.institution });
     writeBook(L.wb, "out", book);
     addToList(L.wb, 3, data.rec.authority);
     addToList(L.wb, 4, data.rec.enclosures);
@@ -270,7 +270,7 @@ export const readAttachment = createServerFn({ method: "POST" })
     const { wb } = await load();
     const role = require(wb, data.code, "user");
     const allowed = [readBook(wb, "in"), readBook(wb, "out")].some((book) =>
-      [...book.active, ...(role === "admin" ? book.archives.flatMap((a) => a.rows) : [])].some((r) => r.attachment.includes(data.id)));
+      book.active.some((r) => r.attachment.includes(data.id)) || (role === "admin" && book.archives.some((a) => a.rows.some((r) => r.attachment.includes(data.id)))));
     if (!allowed) throw new Error("المرفق غير مرتبط بمراسلة متاحة");
     const res = await drive(`/drive/v3/files/${data.id}?alt=media`);
     const bytes = new Uint8Array(await res.arrayBuffer());
