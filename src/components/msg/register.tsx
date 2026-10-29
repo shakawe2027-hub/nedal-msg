@@ -131,10 +131,10 @@ export function Reports({ session, onlyKind, archivesOnly = false }: { session: 
 
   const L = q.data.lists;
   return (
-    <div className={`reports ${onlyKind ? "register" : "reports-dark"}`}>
+    <div className={`reports ${onlyKind ? "register" : "reports-light"}`}>
       <style>{`@page { size: A4 ${orientation}; margin: 12mm; }`}</style>
       <div className="sheet-card-head no-print">
-        <div className="sheet-card-title"><span className="icon-chip"><MailOpen /></span><div><h1>تقارير الصادر والوارد</h1><p className="muted">نظام n.MSG · العام {L.year}</p></div></div>
+        <div className="sheet-card-title"><span className="icon-chip"><MailOpen /></span><div><h1>{onlyKind === "in" ? "سجل المراسلات الواردة" : onlyKind === "out" ? "سجل الكتب الصادرة" : archivesOnly ? "أرشيف الأعوام السابقة" : "المعاينة والتقارير"}</h1><p className="muted">نظام n.MSG · العام {L.year}</p></div></div>
         <div className="row-gap">
           <button className="btn btn-ghost" onClick={() => exportXlsx("in")}><FileDown /> تصدير الوارد Excel</button>
           <button className="btn btn-ghost" onClick={() => exportXlsx("out")}><FileDown /> تصدير الصادر Excel</button>

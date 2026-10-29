@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Send } from "lucide-react";
 import { addOut, uploadAttachment } from "@/lib/msg.functions";
 import { useMsgData, type Session } from "@/lib/session";
+import { WorkspaceSummary } from "@/components/msg/workspace-summary";
 import { Reports } from "@/components/msg/register";
 import { Shell } from "@/components/msg/shell";
 import { Combo, Field, FilePick, SerialBadge, today } from "@/components/msg/fields";
@@ -61,8 +62,9 @@ function OutForm({ session }: { session: Session }) {
   const L = q.data?.lists;
   const last = q.data?.out?.active.at(-1);
   return (
-    <div className="entry-stack">
+    <div className="entry-stack entry-out">
     {last && <div className="last-out no-print">آخر صادر: #{last.serial} · {last.date} · {last.subject}</div>}
+    <WorkspaceSummary rows={q.data?.out?.active ?? []} incoming={false} />
     <form className="sheet-card no-print" onSubmit={submit}>
       <div className="sheet-card-head">
         <div className="sheet-card-title"><span className="icon-chip icon-chip-gold"><Send /></span><div><h1>nedal.MSG.OUT</h1><p className="muted">الكتب الصادرة {L?.year && `· العام ${L.year}`}</p></div></div>
