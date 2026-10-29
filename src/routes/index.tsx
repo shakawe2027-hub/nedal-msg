@@ -49,7 +49,7 @@ function LoginPage() {
           <Brand big />
           <p className="login-tag">نظام إدارة المراسلات الرسمية</p>
           <p className="version-label">النسخة الحالية ( v.010.2026)</p>
-          <p>إعداد وتصميم نضال قزاز</p>
+          <p dir="ltr">Concept and development: nedal_qazzaz</p>
         </div>
         <img className="login-photo" src={correspondence} alt="مراسلات إدارية ومستندات رسمية" width={1536} height={1024} />
       </aside>
