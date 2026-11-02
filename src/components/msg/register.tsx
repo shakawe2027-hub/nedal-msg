@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -46,7 +46,7 @@ export function AdminPrompt({ session }: { session: Session }) {
 
 type Row = { kind: Kind; archive: string | null; r: InRec | OutRec };
 
-export function Reports({ session, onlyKind, archivesOnly = false }: { session: Session; onlyKind?: Kind; archivesOnly?: boolean }) {
+export function Reports({ session, onlyKind, archivesOnly = false, archiveYear }: { session: Session; onlyKind?: Kind; archivesOnly?: boolean; archiveYear?: string | undefined }) {
   const q = useMsgData(session.code);
   const qc = useQueryClient();
   const [kind, setKind] = useState<"all" | Kind>(onlyKind ?? "all");
@@ -58,16 +58,18 @@ export function Reports({ session, onlyKind, archivesOnly = false }: { session: 
   const [search, setSearch] = useState("");
   const [view, setView] = useState<Row | null>(null);
   const [edit, setEdit] = useState<Row | null>(null);
+  const [closeOpen, setCloseOpen] = useState(false);
+  const navigate = useNavigate();
 
   const rows = useMemo<Row[]>(() => {
     const out: Row[] = [];
     for (const [k, book] of [["in", q.data?.in], ["out", q.data?.out]] as const) {
       if (!book) continue;
       if (!archivesOnly) for (const r of book.active) out.push({ kind: k, archive: null, r });
-      if (archivesOnly) for (const a of book.archives) for (const r of a.rows) out.push({ kind: k, archive: a.label, r });
+      if (archivesOnly) for (const a of book.archives) if (!archiveYear || a.label === archiveYear) for (const r of a.rows) out.push({ kind: k, archive: a.label, r });
     }
     return out;
-  }, [q.data]);
+  }, [q.data, archiveYear]);
 
   const filtered = useMemo(
     () =>
@@ -112,24 +114,12 @@ export function Reports({ session, onlyKind, archivesOnly = false }: { session: 
     XLSX.writeFile(wb, `nedal.MSG-${k === "in" ? "الوارد" : "الصادر"}.xlsx`);
   };
 
-  const doCloseYear = async () => {
-    if (!confirm("سيتم أرشفة كل المراسلات الحالية والبدء بأرقام متسلسلة جديدة للعام القادم. متابعة؟")) return;
-    try {
-      const archiveCode = prompt("أدخل رقم الأرشفة");
-      if (!archiveCode) return;
-      const r = await closeYear({ data: { code: session.code, archiveCode } });
-      toast.success(`تمت الأرشفة: ${r.archived} — العام الجديد ${r.year}`);
-      qc.invalidateQueries({ queryKey: ["msg"] });
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
-  };
-
   if (session.role !== "admin" && !onlyKind) return <AdminPrompt session={session} />;
   if (q.isLoading) return <div className="shell-loading">جارٍ قراءة ملف المراسلات…</div>;
   if (q.error || !q.data?.in || !q.data?.out) return <p className="err">{(q.error as Error)?.message ?? "لا يمكن فتح التقارير بهذا الرمز"}</p>;
 
   const L = q.data.lists;
+  const archiveLabels = [...new Set([...q.data.in.archives, ...q.data.out.archives].map((a) => a.label))];
   return (
     <div className={`reports ${onlyKind ? "register" : "reports-light"}`}>
       <style>{`@page { size: A4 ${orientation}; margin: 12mm; }`}</style>
@@ -138,8 +128,13 @@ export function Reports({ session, onlyKind, archivesOnly = false }: { session: 
         <div className="row-gap">
           <button className="btn btn-ghost" onClick={() => exportXlsx("in")}><FileDown /> تصدير الوارد Excel</button>
           <button className="btn btn-ghost" onClick={() => exportXlsx("out")}><FileDown /> تصدير الصادر Excel</button>
-          {session.role === "admin" && !onlyKind && <Link className="btn btn-ghost" to="/archives">أرشيف الأعوام السابقة</Link>}
-          {session.role === "admin" && !onlyKind && <button className="btn btn-gold" onClick={doCloseYear}><Archive /> إنهاء العام {L.year} وأرشفته</button>}
+          {session.role === "admin" && !onlyKind && (
+            <select className="input" aria-label="أرشيف الأعوام السابقة" value={archiveYear ?? ""} onChange={(e) => navigate({ to: "/archives", search: { year: e.target.value || undefined } })}>
+              <option value="">{archivesOnly ? "كل الأعوام المؤرشفة" : "أرشيف الأعوام السابقة…"}</option>
+              {archiveLabels.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+          )}
+          {session.role === "admin" && !onlyKind && !archivesOnly && <button className="btn btn-gold" onClick={() => setCloseOpen(true)}><Archive /> إنهاء العام وأرشفته</button>}
         </div>
       </div>
 
@@ -196,6 +191,7 @@ export function Reports({ session, onlyKind, archivesOnly = false }: { session: 
         </table>
       </div>
 
+      {closeOpen && <CloseYearModal session={session} years={q.data.years ?? []} current={L.year} onClose={(done) => { setCloseOpen(false); if (done) qc.invalidateQueries({ queryKey: ["msg"] }); }} />}
       {view && <Viewer code={session.code} row={view} onClose={() => setView(null)} />}
       {edit && <EditModal session={session} row={edit} onClose={(changed) => { setEdit(null); if (changed) qc.invalidateQueries({ queryKey: ["msg"] }); }} />}
     </div>
@@ -318,4 +314,62 @@ function PrivatePreview({ id, code }: { id: string; code: string }) {
   if (type.startsWith("image/")) return <img className="attachment-image" src={src} alt="الكتاب المرفق" />;
   if (type.includes("pdf")) return <iframe src={src} title="المرفق" />;
   return <a className="btn btn-primary" href={src} download>تنزيل المرفق لفتحه</a>;
+}
+
+function CloseYearModal({ session, years, current, onClose }: { session: Session; years: string[]; current: string; onClose: (done: boolean) => void }) {
+  const [year, setYear] = useState(current);
+  const [archiveCode, setArchiveCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="modal-back" onClick={() => onClose(false)}>
+      <form className="modal modal-sm" dir="rtl" onClick={(e) => e.stopPropagation()} onSubmit={async (e) => {
+        e.preventDefault();
+        if (!confirm(`سيتم نقل مراسلات العام ${year} إلى الأرشيف. متابعة؟`)) return;
+        setBusy(true);
+        try {
+          const r = await closeYear({ data: { code: session.code, archiveCode, year } });
+          toast.success(`تمت الأرشفة: ${r.archived} — العام الحالي ${r.year}`);
+          onClose(true);
+        } catch (err) { toast.error((err as Error).message); } finally { setBusy(false); }
+      }}>
+        <h2>إنهاء العام وأرشفته</h2>
+        <label className="field"><span className="field-label">العام الدراسي</span>
+          <select className="input" value={year} onChange={(e) => setYear(e.target.value)}>{years.map((y) => <option key={y}>{y}</option>)}</select>
+        </label>
+        <label className="field"><span className="field-label">رقم الأرشفة للتأكيد</span>
+          <input className="input" type="password" inputMode="numeric" required value={archiveCode} onChange={(e) => setArchiveCode(e.target.value)} />
+        </label>
+        <div className="row-gap">
+          <button className="btn btn-gold" disabled={busy || !archiveCode.trim()}>{busy ? "جارٍ الأرشفة…" : "تأكيد الأرشفة"}</button>
+          <button type="button" className="btn btn-ghost" onClick={() => onClose(false)}>إلغاء</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/** Full details + scanned copy of every incoming letter awaiting review. */
+export function PendingModal({ code, rows, onClose }: { code: string; rows: InRec[]; onClose: () => void }) {
+  const labels: [keyof InRec, string][] = [["fileNo", "رقم ملف الوارد"], ["date", "تاريخ الوارد"], ["subject", "المبحث"], ["sender", "الجهة/القسم - المرسل"], ["unit", "المديرية/الوحدة"], ["action", "اجراء"], ["notes", "ملاحظات المسؤول"], ["status", "حالة المتابعة"], ["reminderDate", "تاريخ التنبيه"], ["year", "العام الدراسي"]];
+  return (
+    <div className="modal-back" onClick={onClose}>
+      <div className="modal viewer" dir="rtl" onClick={(e) => e.stopPropagation()} style={{ overflow: "auto", display: "block" }}>
+        <div className="row-gap" style={{ justifyContent: "space-between" }}><h2>الكتب بانتظار المراجعة ({rows.length})</h2><button className="btn btn-ghost" onClick={onClose}><X /> إغلاق</button></div>
+        {!rows.length && <p className="muted">لا توجد كتب بانتظار المراجعة</p>}
+        {rows.map((r) => {
+          const id = driveFileId(r.attachment);
+          return (
+            <div key={r.serial} className="viewer" style={{ marginBottom: 16, minHeight: 420 }}>
+              <aside className="viewer-side">
+                <span className="chip chip-in">وارد #{r.serial}</span>
+                {labels.map(([k, l]) => r[k] ? <div key={k} className="viewer-field"><b>{l}</b><span>{String(r[k])}</span></div> : null)}
+                {r.attachment && <a className="btn btn-ghost" href={r.attachment} target="_blank" rel="noreferrer"><Download /> فتح في جوجل درايف</a>}
+              </aside>
+              <div className="viewer-body">{id ? <PrivatePreview id={id} code={code} /> : <p className="muted">لا توجد صورة مرفقة</p>}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }

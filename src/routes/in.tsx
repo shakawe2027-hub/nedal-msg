@@ -6,7 +6,8 @@ import { Inbox } from "lucide-react";
 import { addIn, uploadAttachment } from "@/lib/msg.functions";
 import { useMsgData, type Session } from "@/lib/session";
 import { WorkspaceSummary } from "@/components/msg/workspace-summary";
-import { Reports } from "@/components/msg/register";
+import { Reports, PendingModal } from "@/components/msg/register";
+import type { InRec } from "@/lib/msg";
 import { Shell } from "@/components/msg/shell";
 import { Combo, Field, FilePick, SerialBadge, today } from "@/components/msg/fields";
 
@@ -32,6 +33,7 @@ function InForm({ session }: { session: Session }) {
   const [f, setF] = useState(() => ({ ...empty, date: today() }));
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState(false);
   const set = (k: keyof typeof empty) => (v: string) => setF((p) => ({ ...p, [k]: v }));
 
   const submit = async (e: React.FormEvent) => {
@@ -62,7 +64,8 @@ function InForm({ session }: { session: Session }) {
   const L = q.data?.lists;
   return (
     <div className="entry-stack entry-in">
-    <WorkspaceSummary rows={q.data?.in?.active ?? []} incoming={true} />
+    <WorkspaceSummary rows={q.data?.in?.active ?? []} incoming={true} onPending={() => setPending(true)} />
+    {pending && <PendingModal code={session.code} rows={((q.data?.in?.active ?? []) as InRec[]).filter((r) => r.status === "يعاد مراجعة")} onClose={() => setPending(false)} />}
     <form className="sheet-card no-print" onSubmit={submit}>
       <div className="sheet-card-head">
         <div className="sheet-card-title"><span className="icon-chip"><Inbox /></span><div><h1>nedal.MSG.IN</h1><p className="muted">المراسلات الواردة {L?.year && `· العام ${L.year}`}</p></div></div>
