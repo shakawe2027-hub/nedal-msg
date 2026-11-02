@@ -46,7 +46,7 @@ export function AdminPrompt({ session }: { session: Session }) {
 
 type Row = { kind: Kind; archive: string | null; r: InRec | OutRec };
 
-export function Reports({ session, onlyKind, archivesOnly = false, archiveYear }: { session: Session; onlyKind?: Kind; archivesOnly?: boolean; archiveYear?: string }) {
+export function Reports({ session, onlyKind, archivesOnly = false, archiveYear }: { session: Session; onlyKind?: Kind; archivesOnly?: boolean; archiveYear?: string | undefined }) {
   const q = useMsgData(session.code);
   const qc = useQueryClient();
   const [kind, setKind] = useState<"all" | Kind>(onlyKind ?? "all");
