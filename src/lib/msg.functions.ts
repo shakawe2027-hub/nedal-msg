@@ -127,6 +127,7 @@ export const getMsgData = createServerFn({ method: "POST" })
     return {
       role,
       lists,
+      years: readData(wb).years,
       nextIn: nextSerial(inB.active),
       nextOut: nextSerial(outB.active),
       in: role === "admin" ? inB : { active: inB.active, archives: [] },
@@ -198,21 +199,27 @@ export const updateRecord = createServerFn({ method: "POST" })
   });
 
 export const closeYear = createServerFn({ method: "POST" })
-  .inputValidator((d) => auth.extend({ archiveCode: z.string().min(1) }).parse(d))
+  .inputValidator((d) => auth.extend({ archiveCode: z.string().min(1), year: z.string().min(1).max(40) }).parse(d))
   .handler(async ({ data }) => {
     const L = await load();
     require(L.wb, data.code, "admin");
     const { lists, years, archiveCodes } = readData(L.wb);
     if (!archiveCodes.includes(data.archiveCode.trim())) throw new Error("رقم الأرشفة غير صحيح");
-    const next = nextListedYear(years, lists.year);
+    if (!years.includes(data.year)) throw new Error("العام الدراسي غير موجود في ورقة data");
+    const next = nextListedYear(years, data.year);
     if (!next) throw new Error("أضف العام الدراسي التالي في ورقة data قبل الأرشفة");
-    writeBook(L.wb, "in", archiveBook(readBook(L.wb, "in"), lists.year));
-    writeBook(L.wb, "out", archiveBook(readBook(L.wb, "out"), lists.year));
+    for (const kind of ["in", "out"] as const) {
+      const book = readBook(L.wb, kind) as Book<InRec | OutRec>;
+      for (const r of book.active) if (!r.year) r.year = lists.year;
+      const take = book.active.filter((r) => r.year === data.year);
+      if (take.length) { book.active = book.active.filter((r) => r.year !== data.year); book.archives.unshift({ label: data.year, rows: take }); }
+      writeBook(L.wb, kind, book as never);
+    }
     const meta = XLSX.utils.aoa_to_sheet([[next]]);
     if (!L.wb.SheetNames.includes("_nedal_meta")) XLSX.utils.book_append_sheet(L.wb, meta, "_nedal_meta");
     else L.wb.Sheets["_nedal_meta"] = meta;
     await save(L);
-    return { archived: ARCHIVE_PREFIX + lists.year, year: next };
+    return { archived: ARCHIVE_PREFIX + data.year, year: next };
   });
 
 async function folderId(kind: string) {
@@ -242,7 +249,7 @@ export const uploadAttachment = createServerFn({ method: "POST" })
     require(wb, data.code, "user");
     const parent = await folderId(data.kind);
     const ext = data.file.name.includes(".") ? data.file.name.slice(data.file.name.lastIndexOf(".")) : "";
-    const meta = { name: `وارد . ${data.subject} . ${readData(wb).lists.year}${ext}`, parents: [parent] };
+    const meta = { name: `${data.kind === "out" ? "صادر" : "وارد"} . ${data.subject} . ${readData(wb).lists.year}${ext}`, parents: [parent] };
     const boundary = "nedalmsg" + Date.now();
     const enc = new TextEncoder();
     const body = new Blob([
