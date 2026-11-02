@@ -350,6 +350,8 @@ function CloseYearModal({ session, years, current, onClose }: { session: Session
 
 /** Full details + scanned copy of every incoming letter awaiting review. */
 export function PendingModal({ code, rows, onClose }: { code: string; rows: InRec[]; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [doing, setDoing] = useState<number | null>(null);
   const labels: [keyof InRec, string][] = [["fileNo", "رقم ملف الوارد"], ["date", "تاريخ الوارد"], ["subject", "المبحث"], ["sender", "الجهة/القسم - المرسل"], ["unit", "المديرية/الوحدة"], ["action", "اجراء"], ["notes", "ملاحظات المسؤول"], ["status", "حالة المتابعة"], ["reminderDate", "تاريخ التنبيه"], ["year", "العام الدراسي"]];
   return (
     <div className="modal-back" onClick={onClose}>
@@ -364,6 +366,14 @@ export function PendingModal({ code, rows, onClose }: { code: string; rows: InRe
                 <span className="chip chip-in">وارد #{r.serial}</span>
                 {labels.map(([k, l]) => r[k] ? <div key={k} className="viewer-field"><b>{l}</b><span>{String(r[k])}</span></div> : null)}
                 {r.attachment && <a className="btn btn-ghost" href={r.attachment} target="_blank" rel="noreferrer"><Download /> فتح في جوجل درايف</a>}
+                <button className="btn btn-primary" disabled={doing === r.serial} onClick={async () => {
+                  setDoing(r.serial);
+                  try {
+                    await updateRecord({ data: { code, kind: "in", archive: null, serial: r.serial, patch: { status: "تمت المراجعة" } } });
+                    toast.success(`تمت مراجعة الوارد رقم ${r.serial}`);
+                    await qc.invalidateQueries({ queryKey: ["msg"] });
+                  } catch (e) { toast.error((e as Error).message); } finally { setDoing(null); }
+                }}>{doing === r.serial ? "جارٍ الحفظ…" : "تمت المراجعة"}</button>
               </aside>
               <div className="viewer-body">{id ? <PrivatePreview id={id} code={code} /> : <p className="muted">لا توجد صورة مرفقة</p>}</div>
             </div>
