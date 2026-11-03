@@ -285,3 +285,24 @@ export const readAttachment = createServerFn({ method: "POST" })
     for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
     return { base64: btoa(binary), type: res.headers.get("content-type") ?? "application/octet-stream" };
   });
+
+/** Admin: permanently deletes every incoming and outgoing record of one school year (active and archived). */
+export const deleteYear = createServerFn({ method: "POST" })
+  .inputValidator((d) => auth.extend({ archiveCode: z.string().min(1), year: z.string().min(1).max(40) }).parse(d))
+  .handler(async ({ data }) => {
+    const L = await load();
+    require(L.wb, data.code, "admin");
+    const { lists, archiveCodes } = readData(L.wb);
+    if (!archiveCodes.includes(data.archiveCode.trim())) throw new Error("رقم الأرشفة غير صحيح");
+    let removed = 0;
+    for (const kind of ["in", "out"] as const) {
+      const book = readBook(L.wb, kind) as Book<InRec | OutRec>;
+      const before = book.active.length + book.archives.reduce((n, a) => n + a.rows.length, 0);
+      book.active = book.active.filter((r) => (r.year || lists.year) !== data.year);
+      book.archives = book.archives.filter((a) => a.label !== data.year).map((a) => ({ ...a, rows: a.rows.filter((r) => r.year !== data.year) }));
+      removed += before - book.active.length - book.archives.reduce((n, a) => n + a.rows.length, 0);
+      writeBook(L.wb, kind, book as never);
+    }
+    await save(L);
+    return { removed };
+  });
