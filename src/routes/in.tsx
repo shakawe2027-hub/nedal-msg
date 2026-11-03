@@ -65,8 +65,8 @@ function InForm({ session }: { session: Session }) {
   return (
     <div className="entry-stack entry-in">
     <WorkspaceSummary rows={q.data?.in?.active ?? []} incoming={true} onPending={() => setPending(true)} />
-    {pending && <PendingModal code={session.code} rows={((q.data?.in?.active ?? []) as InRec[]).filter((r) => r.status === "يعاد مراجعة")} onClose={() => setPending(false)} />}
-    <form className="sheet-card no-print" onSubmit={submit}>
+    {pending && <PendingModal readOnly={session.role === "viewer"} code={session.code} rows={((q.data?.in?.active ?? []) as InRec[]).filter((r) => r.status === "يعاد مراجعة")} onClose={() => setPending(false)} />}
+    {session.role === "viewer" ? <p className="viewer-note no-print">حساب مستكشف: استعراض وطباعة فقط</p> : <form className="sheet-card no-print" onSubmit={submit}>
       <div className="sheet-card-head">
         <div className="sheet-card-title"><span className="icon-chip"><Inbox /></span><div><h1>nedal.MSG.IN</h1><p className="muted">المراسلات الواردة {L?.year && `· العام ${L.year}`}</p></div></div>
         <SerialBadge label="عداد متسلسل" value={q.data?.nextIn ?? "…"} />
@@ -87,7 +87,7 @@ function InForm({ session }: { session: Session }) {
       <div className="sheet-card-actions">
         <button className="btn btn-primary" disabled={busy || !q.data}>{busy ? "جارٍ الحفظ…" : "حفظ الوارد"}</button>
       </div>
-    </form>
+    </form>}
     <Reports session={session} onlyKind="in" />
     </div>
   );

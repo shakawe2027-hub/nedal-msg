@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getMsgData } from "./msg.functions";
 
-export type Session = { code: string; role: "admin" | "user" };
+export type Session = { code: string; role: "admin" | "user" | "viewer" };
 const KEY = "nedal-msg-session";
 
 export function saveSession(s: Session | null) {
