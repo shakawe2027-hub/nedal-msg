@@ -288,14 +288,14 @@ export const readAttachment = createServerFn({ method: "POST" })
 
 /** Admin: permanently deletes every incoming and outgoing record of one school year (active and archived). */
 export const deleteYear = createServerFn({ method: "POST" })
-  .inputValidator((d) => auth.extend({ archiveCode: z.string().min(1), year: z.string().min(1).max(40) }).parse(d))
+  .inputValidator((d) => auth.extend({ archiveCode: z.string().min(1), year: z.string().min(1).max(40), kind: z.enum(["in", "out"]) }).parse(d))
   .handler(async ({ data }) => {
     const L = await load();
     require(L.wb, data.code, "admin");
     const { lists, archiveCodes } = readData(L.wb);
     if (!archiveCodes.includes(data.archiveCode.trim())) throw new Error("رقم الأرشفة غير صحيح");
     let removed = 0;
-    for (const kind of ["in", "out"] as const) {
+    for (const kind of [data.kind]) {
       const book = readBook(L.wb, kind) as Book<InRec | OutRec>;
       const before = book.active.length + book.archives.reduce((n, a) => n + a.rows.length, 0);
       book.active = book.active.filter((r) => (r.year || lists.year) !== data.year);
