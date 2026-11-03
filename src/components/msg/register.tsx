@@ -59,7 +59,7 @@ export function Reports({ session, onlyKind, archivesOnly = false, archiveYear }
   const [view, setView] = useState<Row | null>(null);
   const [edit, setEdit] = useState<Row | null>(null);
   const [closeOpen, setCloseOpen] = useState(false);
-  const [delOpen, setDelOpen] = useState(false);
+  const [delOpen, setDelOpen] = useState<Kind | null>(null);
   const navigate = useNavigate();
 
   const rows = useMemo<Row[]>(() => {
@@ -136,7 +136,7 @@ export function Reports({ session, onlyKind, archivesOnly = false, archiveYear }
             </select>
           )}
           {session.role === "admin" && !onlyKind && !archivesOnly && <button className="btn btn-gold" onClick={() => setCloseOpen(true)}><Archive /> إنهاء العام وأرشفته</button>}
-          {session.role === "admin" && !onlyKind && !archivesOnly && <button className="btn btn-danger" onClick={() => setDelOpen(true)}><Trash2 /> حذف الصادر والوارد لعام</button>}
+          {session.role === "admin" && !onlyKind && !archivesOnly && <><button className="btn btn-danger" onClick={() => setDelOpen("in")}><Trash2 /> حذف الوارد لعام</button><button className="btn btn-danger" onClick={() => setDelOpen("out")}><Trash2 /> حذف الصادر لعام</button></>}
         </div>
       </div>
 
@@ -193,7 +193,7 @@ export function Reports({ session, onlyKind, archivesOnly = false, archiveYear }
         </table>
       </div>
 
-      {delOpen && <CloseYearModal del session={session} years={q.data.years ?? []} current={L.year} onClose={(done) => { setDelOpen(false); if (done) qc.invalidateQueries({ queryKey: ["msg"] }); }} />}
+      {delOpen && <CloseYearModal del={delOpen} session={session} years={q.data.years ?? []} current={L.year} onClose={(done) => { setDelOpen(null); if (done) qc.invalidateQueries({ queryKey: ["msg"] }); }} />}
       {closeOpen && <CloseYearModal session={session} years={q.data.years ?? []} current={L.year} onClose={(done) => { setCloseOpen(false); if (done) qc.invalidateQueries({ queryKey: ["msg"] }); }} />}
       {view && <Viewer code={session.code} row={view} onClose={() => setView(null)} />}
       {edit && <EditModal session={session} row={edit} onClose={(changed) => { setEdit(null); if (changed) qc.invalidateQueries({ queryKey: ["msg"] }); }} />}
@@ -319,7 +319,7 @@ function PrivatePreview({ id, code }: { id: string; code: string }) {
   return <a className="btn btn-primary" href={src} download>تنزيل المرفق لفتحه</a>;
 }
 
-function CloseYearModal({ del, session, years, current, onClose }: { del?: boolean; session: Session; years: string[]; current: string; onClose: (done: boolean) => void }) {
+function CloseYearModal({ del, session, years, current, onClose }: { del?: Kind; session: Session; years: string[]; current: string; onClose: (done: boolean) => void }) {
   const [year, setYear] = useState(current);
   const [archiveCode, setArchiveCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -327,16 +327,16 @@ function CloseYearModal({ del, session, years, current, onClose }: { del?: boole
     <div className="modal-back" onClick={() => onClose(false)}>
       <form className="modal modal-sm" dir="rtl" onClick={(e) => e.stopPropagation()} onSubmit={async (e) => {
         e.preventDefault();
-        if (!confirm(del ? `سيتم حذف جميع الصادر والوارد للعام ${year} نهائياً من الملف. متابعة؟` : `سيتم نقل مراسلات العام ${year} إلى الأرشيف. متابعة؟`)) return;
+        if (!confirm(del ? `سيتم حذف جميع ${del === "in" ? "الوارد" : "الصادر"} للعام ${year} نهائياً من الملف. متابعة؟` : `سيتم نقل مراسلات العام ${year} إلى الأرشيف. متابعة؟`)) return;
         setBusy(true);
         try {
-          if (del) { const d = await deleteYear({ data: { code: session.code, archiveCode, year } }); toast.success(`تم حذف ${d.removed} مراسلة للعام ${year}`); onClose(true); return; }
+          if (del) { const d = await deleteYear({ data: { code: session.code, archiveCode, year, kind: del } }); toast.success(`تم حذف ${d.removed} مراسلة للعام ${year}`); onClose(true); return; }
           const r = await closeYear({ data: { code: session.code, archiveCode, year } });
           toast.success(`تمت الأرشفة: ${r.archived} — العام الحالي ${r.year}`);
           onClose(true);
         } catch (err) { toast.error((err as Error).message); } finally { setBusy(false); }
       }}>
-        <h2>{del ? "حذف جميع الصادر والوارد لعام" : "إنهاء العام وأرشفته"}</h2>
+        <h2>{del ? `حذف جميع ${del === "in" ? "الوارد" : "الصادر"} لعام` : "إنهاء العام وأرشفته"}</h2>
         <label className="field"><span className="field-label">العام الدراسي</span>
           <select className="input" value={year} onChange={(e) => setYear(e.target.value)}>{years.map((y) => <option key={y}>{y}</option>)}</select>
         </label>
