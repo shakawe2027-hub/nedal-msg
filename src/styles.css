@@ -363,3 +363,6 @@ body:has(.reports-light) { background: var(--background); }
 .login-card .btn:hover:not(:disabled) { filter: brightness(1.08); }
 .login-card .signature { text-align: center; color: var(--brand-gold); }
 .login-meta { font-size: .85rem; opacity: .8; line-height: 1.7; }
+.login-card .btn { justify-content: center; text-align: center; }
+.login-card .input:focus { outline: none; border-color: var(--brand-gold); box-shadow: 0 0 0 3px oklch(0.76 0.13 82 / .25); }
+.login-card .btn:disabled { opacity: .55; }
