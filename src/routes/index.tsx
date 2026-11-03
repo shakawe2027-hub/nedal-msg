@@ -56,12 +56,14 @@ function LoginPage() {
       <section className="login-panel">
         <ClockBar />
         <form className="login-card" onSubmit={submit}>
+          <Brand big />
+          <p className="login-tag">نظام إدارة المراسلات الرسمية</p>
           <span className="login-key"><KeyRound /></span>
-          <h1>نظام nedal.MSG</h1>
           <p className="muted">أدخل الرقم الوطني، أو رمز صفحة المعاينة</p>
           <input className="input input-lg" inputMode="numeric" autoFocus value={code} onChange={(e) => setCode(e.target.value)} placeholder="الرقم الوطني" />
           {err && <p className="err">{err}</p>}
           <button className="btn btn-primary btn-lg" disabled={busy || !code.trim()}>{busy ? "جارٍ التحقق…" : "دخول"}</button>
+          <div className="login-meta"><p>النسخة الحالية ( v.010.2026)</p><p dir="ltr">Concept and development: nedal_qazzaz</p></div>
           <Signature />
         </form>
       </section>
