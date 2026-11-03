@@ -59,6 +59,7 @@ export function Reports({ session, onlyKind, archivesOnly = false, archiveYear }
   const [view, setView] = useState<Row | null>(null);
   const [edit, setEdit] = useState<Row | null>(null);
   const [closeOpen, setCloseOpen] = useState(false);
+  const [delOpen, setDelOpen] = useState(false);
   const navigate = useNavigate();
 
   const rows = useMemo<Row[]>(() => {
