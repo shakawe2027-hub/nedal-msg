@@ -70,19 +70,21 @@ function readData(wb: XLSX.WorkBook) {
   const metaSheet = wb.Sheets["_nedal_meta"];
   const activeYear = metaSheet ? s(metaSheet["A1"]?.v) : "";
   if (activeYear && col(1).includes(activeYear)) lists.year = activeYear;
-  return { lists, years: col(1), archiveCodes: col(8), ids: col(6), admin: col(7) };
+  return { lists, years: col(1), archiveCodes: col(8), ids: col(6), admin: col(7), viewers: col(9) };
 }
 
-function roleOf(wb: XLSX.WorkBook, code: string): "admin" | "user" | null {
-  const { ids, admin } = readData(wb);
+function roleOf(wb: XLSX.WorkBook, code: string): "admin" | "user" | "viewer" | null {
+  const { ids, admin, viewers } = readData(wb);
   const c = code.trim();
   if (!c) return null;
   if (admin.includes(c)) return "admin";
   if (ids.includes(c)) return "user";
+  if (viewers.includes(c)) return "viewer";
   return null;
 }
-function require(wb: XLSX.WorkBook, code: string, need: "user" | "admin") {
+function require(wb: XLSX.WorkBook, code: string, need: "read" | "user" | "admin") {
   const r = roleOf(wb, code);
+  if (r === "viewer" && need !== "read") throw new Error("حساب المستكشف للاستعراض والطباعة فقط");
   if (!r || (need === "admin" && r !== "admin")) throw new Error("رمز الدخول غير صحيح");
   return r;
 }
@@ -120,7 +122,7 @@ export const getMsgData = createServerFn({ method: "POST" })
   .inputValidator((d) => auth.parse(d))
   .handler(async ({ data }) => {
     const { wb } = await load();
-    const role = require(wb, data.code, "user");
+    const role = require(wb, data.code, "read");
     const inB = readBook(wb, "in");
     const outB = readBook(wb, "out");
     const { lists } = readData(wb);
@@ -130,8 +132,8 @@ export const getMsgData = createServerFn({ method: "POST" })
       years: readData(wb).years,
       nextIn: nextSerial(inB.active),
       nextOut: nextSerial(outB.active),
-      in: role === "admin" ? inB : { active: inB.active, archives: [] },
-      out: role === "admin" ? outB : { active: outB.active, archives: [] },
+      in: role !== "user" ? inB : { active: inB.active, archives: [] },
+      out: role !== "user" ? outB : { active: outB.active, archives: [] },
     };
   });
 
@@ -275,9 +277,9 @@ export const readAttachment = createServerFn({ method: "POST" })
   .inputValidator((d) => auth.extend({ id: z.string().regex(/^[\w-]+$/) }).parse(d))
   .handler(async ({ data }) => {
     const { wb } = await load();
-    const role = require(wb, data.code, "user");
+    const role = require(wb, data.code, "read");
     const allowed = [readBook(wb, "in"), readBook(wb, "out")].some((book) =>
-      book.active.some((r) => r.attachment.includes(data.id)) || (role === "admin" && book.archives.some((a) => a.rows.some((r) => r.attachment.includes(data.id)))));
+      book.active.some((r) => r.attachment.includes(data.id)) || (role !== "user" && book.archives.some((a) => a.rows.some((r) => r.attachment.includes(data.id)))));
     if (!allowed) throw new Error("المرفق غير مرتبط بمراسلة متاحة");
     const res = await drive(`/drive/v3/files/${data.id}?alt=media`);
     const bytes = new Uint8Array(await res.arrayBuffer());
@@ -305,4 +307,29 @@ export const deleteYear = createServerFn({ method: "POST" })
     }
     await save(L);
     return { removed };
+  });
+
+/** Admin: undo a year-end archive — moves the archived year back to active and makes it the current year. */
+export const undoArchive = createServerFn({ method: "POST" })
+  .inputValidator((d) => auth.extend({ archiveCode: z.string().min(1), year: z.string().min(1).max(40) }).parse(d))
+  .handler(async ({ data }) => {
+    const L = await load();
+    require(L.wb, data.code, "admin");
+    if (!readData(L.wb).archiveCodes.includes(data.archiveCode.trim())) throw new Error("رقم الأرشفة غير صحيح");
+    let moved = 0;
+    for (const kind of ["in", "out"] as const) {
+      const book = readBook(L.wb, kind) as Book<InRec | OutRec>;
+      const arc = book.archives.find((a) => a.label === data.year);
+      if (!arc) continue;
+      book.archives = book.archives.filter((a) => a !== arc);
+      book.active = [...arc.rows, ...book.active].sort((a, b) => a.serial - b.serial);
+      moved += arc.rows.length;
+      writeBook(L.wb, kind, book as never);
+    }
+    if (!moved) throw new Error("لا يوجد أرشيف لهذا العام");
+    const meta = XLSX.utils.aoa_to_sheet([[data.year]]);
+    if (!L.wb.SheetNames.includes("_nedal_meta")) XLSX.utils.book_append_sheet(L.wb, meta, "_nedal_meta");
+    else L.wb.Sheets["_nedal_meta"] = meta;
+    await save(L);
+    return { moved };
   });

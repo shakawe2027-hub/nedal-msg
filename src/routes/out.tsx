@@ -65,7 +65,7 @@ function OutForm({ session }: { session: Session }) {
     <div className="entry-stack entry-out">
     {last && <div className="last-out no-print">آخر صادر: #{last.serial} · {last.date} · {last.subject}</div>}
     <WorkspaceSummary rows={q.data?.out?.active ?? []} incoming={false} />
-    <form className="sheet-card no-print" onSubmit={submit}>
+    {session.role === "viewer" ? <p className="viewer-note no-print">حساب مستكشف: استعراض وطباعة فقط</p> : <form className="sheet-card no-print" onSubmit={submit}>
       <div className="sheet-card-head">
         <div className="sheet-card-title"><span className="icon-chip icon-chip-gold"><Send /></span><div><h1>nedal.MSG.OUT</h1><p className="muted">الكتب الصادرة {L?.year && `· العام ${L.year}`}</p></div></div>
         <SerialBadge label="الرقم الصادر" value={q.data?.nextOut ?? "…"} />
@@ -82,7 +82,7 @@ function OutForm({ session }: { session: Session }) {
       <div className="sheet-card-actions">
         <button className="btn btn-gold" disabled={busy || !q.data}>{busy ? "جارٍ الحفظ…" : "حفظ الصادر"}</button>
       </div>
-    </form>
+    </form>}
     <Reports session={session} onlyKind="out" />
     </div>
   );
