@@ -376,3 +376,8 @@ body:has(.reports-light) { background: var(--background); }
 .login-card .btn { color: oklch(0.2 0.05 262); }
 .login-card .signature, .login-key { color: oklch(0.6 0.12 70); }
 .login-panel .clock-bar { color: oklch(0.88 0.1 85); }
+.viewer-note { text-align: center; padding: .8rem; border-radius: 8px; background: oklch(0.95 0.04 85); color: oklch(0.4 0.08 70); font-weight: 600; }
+.inst-marquee { display: inline-block; overflow: hidden; max-width: 22rem; white-space: nowrap; vertical-align: middle; }
+.inst-marquee span { display: inline-block; padding-inline-start: 100%; animation: inst-run 12s linear infinite; background: linear-gradient(90deg, oklch(0.6 0.12 70), oklch(0.82 0.13 85), oklch(0.6 0.12 70)); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 800; }
+@keyframes inst-run { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .inst-marquee span { animation: none; padding: 0; } }
