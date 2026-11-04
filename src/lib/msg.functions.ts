@@ -70,7 +70,7 @@ function readData(wb: XLSX.WorkBook) {
   const metaSheet = wb.Sheets["_nedal_meta"];
   const activeYear = metaSheet ? s(metaSheet["A1"]?.v) : "";
   if (activeYear && col(1).includes(activeYear)) lists.year = activeYear;
-  return { lists, years: col(1), archiveCodes: col(8), ids: col(6), admin: col(7), viewers: col(9) };
+  return { lists, years: col(1), archiveCodes: col(8), ids: col(6), admin: col(7), viewers: col(9), senderEmail: col(10)[0] ?? "", whatsapp: col(11).map((x) => x.replace(/\.0$/, "").replace(/\D/g, ""))[0] ?? "" };
 }
 
 function roleOf(wb: XLSX.WorkBook, code: string): "admin" | "user" | "viewer" | null {
@@ -130,6 +130,7 @@ export const getMsgData = createServerFn({ method: "POST" })
       role,
       lists,
       years: readData(wb).years,
+      whatsapp: readData(wb).whatsapp,
       nextIn: nextSerial(inB.active),
       nextOut: nextSerial(outB.active),
       in: role !== "user" ? inB : { active: inB.active, archives: [] },
@@ -332,4 +333,32 @@ export const undoArchive = createServerFn({ method: "POST" })
     else L.wb.Sheets["_nedal_meta"] = meta;
     await save(L);
     return { moved };
+  });
+
+const b64 = (bytes: Uint8Array) => { let bin = ""; for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode(...bytes.subarray(i, i + 8192)); return btoa(bin); };
+const hdr = (v: string) => (/^[\x00-\x7F]*$/.test(v) ? v : `=?UTF-8?B?${b64(new TextEncoder().encode(v))}?=`);
+
+/** Sends a report or a letter (with its Drive attachment) by Gmail from the data-sheet sender address. */
+export const sendMail = createServerFn({ method: "POST" })
+  .inputValidator((d) => auth.extend({ to: z.string().email().max(200), subject: z.string().min(1).max(300), html: z.string().max(400000), attachmentId: z.string().regex(/^[\w-]+$/).optional() }).parse(d))
+  .handler(async ({ data }) => {
+    const { wb } = await load();
+    require(wb, data.code, "user");
+    const { senderEmail } = readData(wb);
+    const mailKey = process.env["GOOGLE_MAIL_API_KEY"];
+    if (!mailKey) throw new Error("بريد الإرسال غير مربوط بعد");
+    const B = "nedalmail" + Date.now();
+    const parts = [`From: ${hdr("nedal.MSG")} <${senderEmail}>`, `To: ${data.to}`, `Subject: ${hdr(data.subject)}`, "MIME-Version: 1.0", `Content-Type: multipart/mixed; boundary=${B}`, "", `--${B}`, "Content-Type: text/html; charset=UTF-8", "Content-Transfer-Encoding: base64", "", b64(new TextEncoder().encode(data.html))];
+    if (data.attachmentId) {
+      const meta = (await (await drive(`/drive/v3/files/${data.attachmentId}?fields=name,mimeType`)).json()) as { name: string; mimeType: string };
+      const bytes = new Uint8Array(await (await drive(`/drive/v3/files/${data.attachmentId}?alt=media`)).arrayBuffer());
+      parts.push(`--${B}`, `Content-Type: ${meta.mimeType}; name="${hdr(meta.name)}"`, `Content-Disposition: attachment; filename="${hdr(meta.name)}"`, "Content-Transfer-Encoding: base64", "", b64(bytes));
+    }
+    parts.push(`--${B}--`);
+    const raw = b64(new TextEncoder().encode(parts.join("\r\n"))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const res = await fetch("https://connector-gateway.lovable.dev/google_mail/gmail/v1/users/me/messages/send", {
+      method: "POST", headers: headers({ "X-Connection-Api-Key": mailKey, "Content-Type": "application/json" }), body: JSON.stringify({ raw }),
+    });
+    if (!res.ok) { console.error(`Gmail [${res.status}]: ${await res.text()}`); throw new Error(`تعذر إرسال البريد [${res.status}]`); }
+    return { ok: true };
   });

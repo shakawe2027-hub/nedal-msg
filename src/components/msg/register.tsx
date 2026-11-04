@@ -3,8 +3,8 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
-import { Archive, Download, FileDown, Paperclip, Pencil, Printer, X, KeyRound, MailOpen, Trash2 } from "lucide-react";
-import { closeYear, deleteYear, login, updateRecord, readAttachment } from "@/lib/msg.functions";
+import { Archive, Download, FileDown, Paperclip, Pencil, Printer, X, KeyRound, MailOpen, Trash2, Send } from "lucide-react";
+import { sendMail, closeYear, deleteYear, undoArchive, login, updateRecord, readAttachment } from "@/lib/msg.functions";
 import { saveSession, useMsgData, type Session } from "@/lib/session";
 import { driveFileId, IN_HEADER, OUT_HEADER, type InRec, type Kind, type OutRec } from "@/lib/msg";
 import { Shell, Signature } from "@/components/msg/shell";
@@ -59,6 +59,8 @@ export function Reports({ session, onlyKind, archivesOnly = false, archiveYear }
   const [view, setView] = useState<Row | null>(null);
   const [edit, setEdit] = useState<Row | null>(null);
   const [closeOpen, setCloseOpen] = useState(false);
+  const [undoOpen, setUndoOpen] = useState(false);
+  const [send, setSend] = useState<{ rows: Row[]; title: string } | null>(null);
   const [delOpen, setDelOpen] = useState<Kind | null>(null);
   const navigate = useNavigate();
 
@@ -115,7 +117,7 @@ export function Reports({ session, onlyKind, archivesOnly = false, archiveYear }
     XLSX.writeFile(wb, `nedal.MSG-${k === "in" ? "الوارد" : "الصادر"}.xlsx`);
   };
 
-  if (session.role !== "admin" && !onlyKind) return <AdminPrompt session={session} />;
+  if (session.role === "user" && !onlyKind) return <AdminPrompt session={session} />;
   if (q.isLoading) return <div className="shell-loading">جارٍ قراءة ملف المراسلات…</div>;
   if (q.error || !q.data?.in || !q.data?.out) return <p className="err">{(q.error as Error)?.message ?? "لا يمكن فتح التقارير بهذا الرمز"}</p>;
 
@@ -127,16 +129,16 @@ export function Reports({ session, onlyKind, archivesOnly = false, archiveYear }
       <div className="sheet-card-head no-print">
         <div className="sheet-card-title"><span className="icon-chip"><MailOpen /></span><div><h1>{onlyKind === "in" ? "سجل المراسلات الواردة" : onlyKind === "out" ? "سجل الكتب الصادرة" : archivesOnly ? "أرشيف الأعوام السابقة" : "المعاينة والتقارير"}</h1><p className="muted">نظام n.MSG · العام {L.year}</p></div></div>
         <div className="row-gap">
-          <button className="btn btn-ghost" onClick={() => exportXlsx("in")}><FileDown /> تصدير الوارد Excel</button>
-          <button className="btn btn-ghost" onClick={() => exportXlsx("out")}><FileDown /> تصدير الصادر Excel</button>
-          {session.role === "admin" && !onlyKind && (
+          {session.role !== "viewer" && <><button className="btn btn-ghost" onClick={() => exportXlsx("in")}><FileDown /> تصدير الوارد Excel</button>
+          <button className="btn btn-ghost" onClick={() => exportXlsx("out")}><FileDown /> تصدير الصادر Excel</button></>}
+          {session.role !== "user" && !onlyKind && (
             <select className="input" aria-label="أرشيف الأعوام السابقة" value={archiveYear ?? ""} onChange={(e) => navigate({ to: "/archives", search: { year: e.target.value || undefined } })}>
               <option value="">{archivesOnly ? "كل الأعوام المؤرشفة" : "أرشيف الأعوام السابقة…"}</option>
               {archiveLabels.map((y) => <option key={y} value={y}>{y}</option>)}
             </select>
           )}
           {session.role === "admin" && !onlyKind && !archivesOnly && <button className="btn btn-gold" onClick={() => setCloseOpen(true)}><Archive /> إنهاء العام وأرشفته</button>}
-          {session.role === "admin" && !onlyKind && !archivesOnly && <><button className="btn btn-danger" onClick={() => setDelOpen("in")}><Trash2 /> حذف الوارد لعام</button><button className="btn btn-danger" onClick={() => setDelOpen("out")}><Trash2 /> حذف الصادر لعام</button></>}
+          {session.role === "admin" && !onlyKind && !archivesOnly && <><button className="btn btn-danger" onClick={() => setDelOpen("in")}><Trash2 /> حذف الوارد لعام</button><button className="btn btn-danger" onClick={() => setDelOpen("out")}><Trash2 /> حذف الصادر لعام</button><button className="btn btn-ghost" onClick={() => setUndoOpen(true)}><Archive /> التراجع عن إنهاء العام</button></>}
         </div>
       </div>
 
@@ -165,6 +167,7 @@ export function Reports({ session, onlyKind, archivesOnly = false, archiveYear }
         <select className="input" aria-label="اتجاه الطباعة" value={orientation} onChange={(e) => setOrientation(e.target.value)}><option value="portrait">بالطول</option><option value="landscape">بالعرض</option></select>
         <button className="btn btn-ghost" onClick={() => setKind("in")}>البحث عن الوارد</button><button className="btn btn-ghost" onClick={() => setKind("out")}>البحث عن الصادر</button><button className="btn btn-ghost" onClick={() => setKind("all")}>البحث عن الصادر والوارد</button>
         <button className="btn btn-primary" onClick={() => window.print()}><Printer /> طباعة التقرير</button>
+        {session.role !== "viewer" && <button className="btn btn-gold" onClick={() => setSend({ rows: filtered, title: kind === "all" ? "تقرير الصادر والوارد" : kind === "in" ? "تقرير الوارد" : "تقرير الصادر" })}><Send /> إرسال تقرير</button>}
       </div>
 
       <PrintReport rows={filtered} title={kind === "all" ? "تقرير الصادر والوارد" : kind === "in" ? "تقرير الوارد" : "تقرير الصادر"} year={L.year} />
@@ -185,7 +188,7 @@ export function Reports({ session, onlyKind, archivesOnly = false, archiveYear }
                 <td>{row.kind === "in" ? (row.r as InRec).sender : (row.r as OutRec).authority}</td>
                 <td>{row.r.attachment && <button className="btn-icon" title="استعراض المرفق" onClick={() => setView(row)}><Paperclip /></button>}</td>
                 <td>{row.archive && <span className="chip chip-arch">{row.archive}</span>}</td>
-                <td><button className="btn-icon" title="تعديل / إجراء" onClick={() => setEdit(row)}><Pencil /></button></td>
+                <td>{session.role !== "viewer" && <><button className="btn-icon" title="تعديل / إجراء" onClick={() => setEdit(row)}><Pencil /></button><button className="btn-icon" title="إرسال الكتاب بالبريد أو واتساب" onClick={() => setSend({ rows: [row], title: `${row.kind === "in" ? "وارد" : "صادر"} رقم ${row.r.serial} — ${row.r.subject}` })}><Send /></button></>}</td>
               </tr>
             ))}
             {!filtered.length && <tr><td colSpan={9} className="muted">لا توجد مراسلات مطابقة</td></tr>}
@@ -193,6 +196,8 @@ export function Reports({ session, onlyKind, archivesOnly = false, archiveYear }
         </table>
       </div>
 
+      {send && <SendModal code={session.code} rows={send.rows} title={send.title} institution={L.institution} whatsapp={q.data.whatsapp ?? ""} onClose={() => setSend(null)} />}
+      {undoOpen && <CloseYearModal undo session={session} years={archiveLabels} current={archiveLabels[0] ?? ""} onClose={(done) => { setUndoOpen(false); if (done) qc.invalidateQueries({ queryKey: ["msg"] }); }} />}
       {delOpen && <CloseYearModal del={delOpen} session={session} years={q.data.years ?? []} current={L.year} onClose={(done) => { setDelOpen(null); if (done) qc.invalidateQueries({ queryKey: ["msg"] }); }} />}
       {closeOpen && <CloseYearModal session={session} years={q.data.years ?? []} current={L.year} onClose={(done) => { setCloseOpen(false); if (done) qc.invalidateQueries({ queryKey: ["msg"] }); }} />}
       {view && <Viewer code={session.code} row={view} onClose={() => setView(null)} />}
@@ -319,7 +324,7 @@ function PrivatePreview({ id, code }: { id: string; code: string }) {
   return <a className="btn btn-primary" href={src} download>تنزيل المرفق لفتحه</a>;
 }
 
-function CloseYearModal({ del, session, years, current, onClose }: { del?: Kind; session: Session; years: string[]; current: string; onClose: (done: boolean) => void }) {
+function CloseYearModal({ undo, del, session, years, current, onClose }: { undo?: boolean; del?: Kind; session: Session; years: string[]; current: string; onClose: (done: boolean) => void }) {
   const [year, setYear] = useState(current);
   const [archiveCode, setArchiveCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -327,16 +332,17 @@ function CloseYearModal({ del, session, years, current, onClose }: { del?: Kind;
     <div className="modal-back" onClick={() => onClose(false)}>
       <form className="modal modal-sm" dir="rtl" onClick={(e) => e.stopPropagation()} onSubmit={async (e) => {
         e.preventDefault();
-        if (!confirm(del ? `سيتم حذف جميع ${del === "in" ? "الوارد" : "الصادر"} للعام ${year} نهائياً من الملف. متابعة؟` : `سيتم نقل مراسلات العام ${year} إلى الأرشيف. متابعة؟`)) return;
+        if (!confirm(undo ? `سيتم إرجاع مراسلات العام ${year} من الأرشيف وجعله العام الحالي. متابعة؟` : del ? `سيتم حذف جميع ${del === "in" ? "الوارد" : "الصادر"} للعام ${year} نهائياً من الملف. متابعة؟` : `سيتم نقل مراسلات العام ${year} إلى الأرشيف. متابعة؟`)) return;
         setBusy(true);
         try {
+          if (undo) { const u = await undoArchive({ data: { code: session.code, archiveCode, year } }); toast.success(`أعيدت ${u.moved} مراسلة من أرشيف ${year}`); onClose(true); return; }
           if (del) { const d = await deleteYear({ data: { code: session.code, archiveCode, year, kind: del } }); toast.success(`تم حذف ${d.removed} مراسلة للعام ${year}`); onClose(true); return; }
           const r = await closeYear({ data: { code: session.code, archiveCode, year } });
           toast.success(`تمت الأرشفة: ${r.archived} — العام الحالي ${r.year}`);
           onClose(true);
         } catch (err) { toast.error((err as Error).message); } finally { setBusy(false); }
       }}>
-        <h2>{del ? `حذف جميع ${del === "in" ? "الوارد" : "الصادر"} لعام` : "إنهاء العام وأرشفته"}</h2>
+        <h2>{undo ? "التراجع عن إنهاء العام وأرشفته" : del ? `حذف جميع ${del === "in" ? "الوارد" : "الصادر"} لعام` : "إنهاء العام وأرشفته"}</h2>
         <label className="field"><span className="field-label">العام الدراسي</span>
           <select className="input" value={year} onChange={(e) => setYear(e.target.value)}>{years.map((y) => <option key={y}>{y}</option>)}</select>
         </label>
@@ -353,7 +359,7 @@ function CloseYearModal({ del, session, years, current, onClose }: { del?: Kind;
 }
 
 /** Full details + scanned copy of every incoming letter awaiting review. */
-export function PendingModal({ code, rows, onClose }: { code: string; rows: InRec[]; onClose: () => void }) {
+export function PendingModal({ code, rows, onClose, readOnly }: { readOnly?: boolean; code: string; rows: InRec[]; onClose: () => void }) {
   const qc = useQueryClient();
   const [doing, setDoing] = useState<number | null>(null);
   const labels: [keyof InRec, string][] = [["fileNo", "رقم ملف الوارد"], ["date", "تاريخ الوارد"], ["subject", "المبحث"], ["sender", "الجهة/القسم - المرسل"], ["unit", "المديرية/الوحدة"], ["action", "اجراء"], ["notes", "ملاحظات المسؤول"], ["status", "حالة المتابعة"], ["reminderDate", "تاريخ التنبيه"], ["year", "العام الدراسي"]];
@@ -370,20 +376,64 @@ export function PendingModal({ code, rows, onClose }: { code: string; rows: InRe
                 <span className="chip chip-in">وارد #{r.serial}</span>
                 {labels.map(([k, l]) => r[k] ? <div key={k} className="viewer-field"><b>{l}</b><span>{String(r[k])}</span></div> : null)}
                 {r.attachment && <a className="btn btn-ghost" href={r.attachment} target="_blank" rel="noreferrer"><Download /> فتح في جوجل درايف</a>}
-                <button className="btn btn-primary" disabled={doing === r.serial} onClick={async () => {
+                {!readOnly && <button className="btn btn-primary" disabled={doing === r.serial} onClick={async () => {
                   setDoing(r.serial);
                   try {
                     await updateRecord({ data: { code, kind: "in", archive: null, serial: r.serial, patch: { status: "تمت المراجعة" } } });
                     toast.success(`تمت مراجعة الوارد رقم ${r.serial}`);
                     await qc.invalidateQueries({ queryKey: ["msg"] });
                   } catch (e) { toast.error((e as Error).message); } finally { setDoing(null); }
-                }}>{doing === r.serial ? "جارٍ الحفظ…" : "تمت المراجعة"}</button>
+                }}>{doing === r.serial ? "جارٍ الحفظ…" : "تمت المراجعة"}</button>}
               </aside>
               <div className="viewer-body">{id ? <PrivatePreview id={id} code={code} /> : <p className="muted">لا توجد صورة مرفقة</p>}</div>
             </div>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+const esc = (v: unknown) => String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+function reportHtml(rows: Row[], title: string, institution: string) {
+  const tr = rows.map(({ kind, r }) => { const x = r as InRec & OutRec; return `<tr><td>${r.serial}</td><td>${kind === "in" ? "وارد" : "صادر"}</td><td>${esc(r.fileNo)}</td><td>${esc(r.date)}</td><td>${esc(r.subject)}</td><td>${esc(x.sender || x.authority)}</td><td>${r.attachment ? `<a href="${esc(r.attachment)}">فتح</a>` : ""}</td></tr>`; }).join("");
+  return `<div dir="rtl" style="font-family:Arial,sans-serif"><h2>${esc(institution)}</h2><h3>${esc(title)}</h3><table border="1" cellpadding="6" style="border-collapse:collapse"><tr><th>#</th><th>النوع</th><th>رقم الملف</th><th>التاريخ</th><th>المبحث</th><th>الجهة</th><th>مرفق</th></tr>${tr}</table><p style="color:#888">nedal.MSG — by/nedal.qazzaz</p></div>`;
+}
+function reportText(rows: Row[], title: string, institution: string) {
+  return [institution, title, ...rows.map(({ kind, r }) => { const x = r as InRec & OutRec; return `${kind === "in" ? "وارد" : "صادر"} #${r.serial} | ${r.date} | ${r.subject} | ${x.sender || x.authority || ""}${r.attachment ? `\n${r.attachment}` : ""}`; })].join("\n");
+}
+
+/** Send the selected report or letter by Gmail (with the scanned copy) or open WhatsApp with its text and link. */
+function SendModal({ code, rows, title, institution, whatsapp, onClose }: { code: string; rows: Row[]; title: string; institution: string; whatsapp: string; onClose: () => void }) {
+  const [via, setVia] = useState<"mail" | "wa">("mail");
+  const [to, setTo] = useState("");
+  const [phone, setPhone] = useState(whatsapp);
+  const [busy, setBusy] = useState(false);
+  const single = rows.length === 1 ? rows[0] : undefined;
+  const attId = single ? driveFileId(single.r.attachment) ?? undefined : undefined;
+  return (
+    <div className="modal-back" onClick={onClose}>
+      <form className="modal modal-sm" dir="rtl" onClick={(e) => e.stopPropagation()} onSubmit={async (e) => {
+        e.preventDefault();
+        if (via === "wa") { window.open(`https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(reportText(rows, title, institution))}`, "_blank"); onClose(); return; }
+        setBusy(true);
+        try { await sendMail({ data: { code, to, subject: title, html: reportHtml(rows, title, institution), attachmentId: attId } }); toast.success("تم إرسال البريد"); onClose(); }
+        catch (err) { toast.error((err as Error).message); } finally { setBusy(false); }
+      }}>
+        <h2>إرسال: {title}</h2>
+        <p className="muted">{single ? (attId ? "سيُرفق صورة الكتاب" : "لا توجد صورة مرفقة لهذا الكتاب") : `${rows.length} مراسلة في التقرير`}</p>
+        <div className="row-gap">
+          <button type="button" className={`btn ${via === "mail" ? "btn-primary" : "btn-ghost"}`} onClick={() => setVia("mail")}>البريد الإلكتروني</button>
+          <button type="button" className={`btn ${via === "wa" ? "btn-primary" : "btn-ghost"}`} onClick={() => setVia("wa")}>واتساب</button>
+        </div>
+        {via === "mail"
+          ? <label className="field"><span className="field-label">إرسال إلى بريد</span><input className="input" type="email" dir="ltr" required value={to} onChange={(e) => setTo(e.target.value)} /></label>
+          : <label className="field"><span className="field-label">رقم واتساب (مع رمز الدولة)</span><input className="input" dir="ltr" required value={phone} onChange={(e) => setPhone(e.target.value)} /></label>}
+        <div className="row-gap">
+          <button className="btn btn-gold" disabled={busy}>{busy ? "جارٍ الإرسال…" : "إرسال"}</button>
+          <button type="button" className="btn btn-ghost" onClick={onClose}>إلغاء</button>
+        </div>
+      </form>
     </div>
   );
 }
