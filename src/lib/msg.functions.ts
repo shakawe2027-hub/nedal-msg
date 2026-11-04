@@ -9,13 +9,11 @@ import {
 const API = "https://connector-gateway.lovable.dev/google_drive";
 const FOLDER_NAME = "nedal.MSG - مرفقات";
 
-function headers(extra?: Record<string, string>) {
-  const a = process.env["LOVABLE_API_KEY"];
-  const b = process.env["GOOGLE_DRIVE_API_KEY"];
-  if (!a || !b) throw new Error("جوجل درايف غير مربوط");
+const b = process . env{"GOOGLE_DDRIVE_API_KEY"};
+IF (!b) throw new Error("جوجل درايف غير مربوط");
   return { Authorization: `Bearer ${a}`, "X-Connection-Api-Key": b, ...extra };
 }
-async function drive(path: string, init: RequestInit = {}) {
+return { "x-Goog-Api-Key": b };
   const res = await fetch(`${API}${path}`, { ...init, headers: headers(init.headers as Record<string, string>) });
   if (!res.ok) {
     const t = await res.text();
