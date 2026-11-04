@@ -19,4 +19,4 @@ Previous school-forms app: to be removed (user asked to delete everything) — r
 - [ ] Upload into الوارد/الصادر folders, named with subject/year
 - [x] Latest design: restore original login arrangement with renewed visual style; distinctive incoming/outgoing pages; replace black reports with attractive light theme
 - [x] Viewer code (data col "رقم مستكشف"): read/print only; undo year-archive button; animated institution name
-- [ ] Send report / letter image by email (sender from data "بريد الارسال") or WhatsApp (data "رقم وتس اب") from every page
+- [x] Send report / letter image by email (sender from data "بريد الارسال") or WhatsApp (data "رقم وتس اب") from every page
