@@ -63,6 +63,12 @@ function LoginPage() {
           <input className="input input-lg" inputMode="numeric" autoFocus value={code} onChange={(e) => setCode(e.target.value)} placeholder="الرقم الوطني" />
           {err && <p className="err">{err}</p>}
           <button className="btn btn-primary btn-lg" disabled={busy || !code.trim()}>{busy ? "جارٍ التحقق…" : "دخول"}</button>
+          <ul className="login-feats">
+            <li>حفظ المراسلات الصادرة والواردة</li>
+            <li>إصدار تقارير كاملة بالصادر والوارد</li>
+            <li>إرسال تقارير بالإيميل</li>
+            <li>أرشفة العام الدراسي كامل</li>
+          </ul>
           <div className="login-meta"><p>النسخة الحالية ( v.010.2026)</p><p dir="ltr">Concept and development: nedal_qazzaz</p></div>
           <Signature />
         </form>
