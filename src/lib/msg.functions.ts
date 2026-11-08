@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import * as XLSX from "xlsx";
 import { z } from "zod";
 import {
-  archiveBook, buildRows, bumpYear, nextSerial, parseBook, s, ARCHIVE_PREFIX, nextListedYear,
+  archiveBook, buildRows, bumpYear, nextSerial, parseBook, parseTell, s, ARCHIVE_PREFIX, nextListedYear,
   type Book, type InRec, type Kind, type Lists, type OutRec,
 } from "./msg";
 
@@ -273,6 +273,15 @@ export const getPublicInfo = createServerFn({ method: "GET" }).handler(async () 
   const { lists } = readData(wb);
   return { year: lists.year, institution: lists.institution };
 });
+
+/** School directory from the "tell" sheet (school, principal, phones, region). */
+export const getSchools = createServerFn({ method: "POST" })
+  .inputValidator((d) => auth.parse(d))
+  .handler(async ({ data }) => {
+    const { wb } = await load();
+    require(wb, data.code, "read");
+    return { schools: parseTell(rows(wb, "tell")) };
+  });
 
 export const readAttachment = createServerFn({ method: "POST" })
   .inputValidator((d) => auth.extend({ id: z.string().regex(/^[\w-]+$/) }).parse(d))

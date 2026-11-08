@@ -89,3 +89,22 @@ export function nextListedYear(years: string[], current: string): string | null 
   const i = years.indexOf(current);
   return i >= 0 ? years[i + 1] ?? null : null;
 }
+
+export type School = { no: number; school: string; principal: string; schoolPhone: string; unified: string; principalPhone: string; region: string };
+
+/** Parses the "tell" sheet: a region header row ("اذنا (24)") precedes its numbered school rows. */
+export function parseTell(rows: unknown[][]): School[] {
+  const out: School[] = [];
+  let region = "";
+  for (const r of rows.slice(2)) {
+    if (!r || r.every((c) => s(c) === "")) continue;
+    if (typeof r[0] === "string") {
+      region = s(r[0]).replace(/\s*\(\d+\)\s*$/, "");
+      continue;
+    }
+    const no = Number(r[0]);
+    if (!no) continue;
+    out.push({ no, school: s(r[1]), principal: s(r[2]), schoolPhone: s(r[3]), unified: s(r[4]), principalPhone: s(r[5]), region });
+  }
+  return out;
+}
