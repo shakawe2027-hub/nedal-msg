@@ -20,3 +20,5 @@ Previous school-forms app: to be removed (user asked to delete everything) — r
 - [x] Latest design: restore original login arrangement with renewed visual style; distinctive incoming/outgoing pages; replace black reports with attractive light theme
 - [x] Viewer code (data col "رقم مستكشف"): read/print only; undo year-archive button; animated institution name
 - [x] Send report / letter image by email (sender from data "بريد الارسال") or WhatsApp (data "رقم وتس اب") from every page
+- [x] Login page: feature list under sign-in button; institution name blinks in place (no marquee)
+- [ ] School directory (tell sheet: school, principal, mobile/landline, region): search button on incoming page by school or principal name showing full details
