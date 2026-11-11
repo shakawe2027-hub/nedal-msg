@@ -9,10 +9,13 @@ import {
 const API = "https://connector-gateway.lovable.dev/google_drive";
 const FOLDER_NAME = "nedal.MSG - مرفقات";
 
-const b = process.env["GOOGLE_DRIVE_API_KEY"];
-  if (!b) throw new Error("جوجل درايف غير مربوط");
-
-  return { "X-Goog-Api-Key": b };
+function headers(extra?: Record<string, string>) {
+  const a = process.env["LOVABLE_API_KEY"];
+  const b = process.env["GOOGLE_DRIVE_API_KEY"];
+  if (!a || !b) throw new Error("جوجل درايف غير مربوط");
+  return { Authorization: `Bearer ${a}`, "X-Connection-Api-Key": b, ...extra };
+}
+async function drive(path: string, init: RequestInit = {}) {
   const res = await fetch(`${API}${path}`, { ...init, headers: headers(init.headers as Record<string, string>) });
   if (!res.ok) {
     const t = await res.text();
@@ -223,7 +226,7 @@ export const closeYear = createServerFn({ method: "POST" })
   });
 
 async function folderId(kind: string) {
-  const FOLDER_NAME = kind === "out" ? "الصادر" : "الوارد";
+  const FOLDER_NAME = kind === "health" ? "متابعات الصحة المدرسية" : kind === "out" ? "الصادر" : "الوارد";
   const q = encodeURIComponent(`name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
   const j = (await (await drive(`/drive/v3/files?q=${q}&fields=files(id)`)).json()) as { files: { id: string }[] };
   if (j.files[0]) return j.files[0].id;

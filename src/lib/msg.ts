@@ -96,14 +96,14 @@ export type School = { no: number; school: string; principal: string; schoolPhon
 export function parseTell(rows: unknown[][]): School[] {
   const out: School[] = [];
   let region = "";
-  for (const r of rows.slice(2)) {
+  for (const r of rows) {
     if (!r || r.every((c) => s(c) === "")) continue;
-    if (typeof r[0] === "string") {
+    if (typeof r[0] === "string" && /\(\d+\)/.test(r[0])) {
       region = s(r[0]).replace(/\s*\(\d+\)\s*$/, "");
       continue;
     }
     const no = Number(r[0]);
-    if (!no) continue;
+    if (!no || !s(r[1])) continue;
     out.push({ no, school: s(r[1]), principal: s(r[2]), schoolPhone: s(r[3]), unified: s(r[4]), principalPhone: s(r[5]), region });
   }
   return out;
