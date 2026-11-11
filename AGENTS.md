@@ -11,3 +11,4 @@
 
 - Correspondence data is read and written through Drive-backed server functions using SheetJS; the workbook is the single source of truth without a database.
 - Incoming/outgoing pages reuse the shared register and workspace-summary components so presentation stays consistent with reports.
+- Health referrals fill the original Drive DOCX XML cells and render it client-side; archive copies in Drive and keep metadata in the workbook to preserve the original form and single source of truth.
