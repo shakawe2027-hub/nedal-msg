@@ -22,3 +22,4 @@ Previous school-forms app: to be removed (user asked to delete everything) — r
 - [x] Send report / letter image by email (sender from data "بريد الارسال") or WhatsApp (data "رقم وتس اب") from every page
 - [x] Login page: feature list under sign-in button; institution name blinks in place (no marquee)
 - [ ] School directory (tell sheet: school, principal, mobile/landline, region): search button on incoming page by school or principal name showing full details
+- [ ] School health follow-ups: original Drive injury-referral template on one page, student search, calculated age, school/unit metadata, manual required fields, Drive archive and monthly filter; write referral reasons to student sheet

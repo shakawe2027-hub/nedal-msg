@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import * as XLSX from "xlsx";
 import { z } from "zod";
+import { referralFields, fillReferral, ageAt } from "./health";
 import {
   archiveBook, buildRows, bumpYear, nextSerial, parseBook, parseTell, s, ARCHIVE_PREFIX, nextListedYear,
   type Book, type InRec, type Kind, type Lists, type OutRec,
@@ -9,10 +10,13 @@ import {
 const API = "https://connector-gateway.lovable.dev/google_drive";
 const FOLDER_NAME = "nedal.MSG - مرفقات";
 
-const b = process.env["GOOGLE_DRIVE_API_KEY"];
-  if (!b) throw new Error("جوجل درايف غير مربوط");
-
-  return { "X-Goog-Api-Key": b };
+function headers(extra?: Record<string, string>) {
+  const a = process.env["LOVABLE_API_KEY"];
+  const b = process.env["GOOGLE_DRIVE_API_KEY"];
+  if (!a || !b) throw new Error("جوجل درايف غير مربوط");
+  return { Authorization: `Bearer ${a}`, "X-Connection-Api-Key": b, ...extra };
+}
+async function drive(path: string, init: RequestInit = {}) {
   const res = await fetch(`${API}${path}`, { ...init, headers: headers(init.headers as Record<string, string>) });
   if (!res.ok) {
     const t = await res.text();
@@ -223,7 +227,7 @@ export const closeYear = createServerFn({ method: "POST" })
   });
 
 async function folderId(kind: string) {
-  const FOLDER_NAME = kind === "out" ? "الصادر" : "الوارد";
+  const FOLDER_NAME = kind === "health" ? "متابعات الصحة المدرسية" : kind === "out" ? "الصادر" : "الوارد";
   const q = encodeURIComponent(`name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
   const j = (await (await drive(`/drive/v3/files?q=${q}&fields=files(id)`)).json()) as { files: { id: string }[] };
   if (j.files[0]) return j.files[0].id;
@@ -368,3 +372,71 @@ export const sendMail = createServerFn({ method: "POST" })
     if (!res.ok) { console.error(`Gmail [${res.status}]: ${await res.text()}`); throw new Error(`تعذر إرسال البريد [${res.status}]`); }
     return { ok: true };
   });
+
+function healthInfo(wb: XLSX.WorkBook) {
+  const unit = rows(wb, "بيانات الوحدة");
+  const value = (...keys: string[]) => s(unit.find(r => keys.includes(s(r[0])))?.[1]);
+  return { school: value("اسم المدرسة"), principal: value("اسم مدير المدرسة"), directorate: value("المديرية"), year: value("السنة الدراسية", "العام الدراسي") };
+}
+function healthStudents(wb: XLSX.WorkBook) {
+  const data = rows(wb, "بيانات الطلاب");
+  const header = data[0] ?? [];
+  const col = (name: string) => header.findIndex(v => s(v) === name);
+  return data.slice(1).map((r, i) => ({ row: i + 1, name: s(r[col("اسم الطالب")]), id: s(r[col("رقم هوية الطالب")]), birth: s(r[col("تاريخ الميلاد")]), address: s(r[col("مكان السكن الحالي")]) })).filter(r => r.name && r.id);
+}
+function healthArchives(wb: XLSX.WorkBook) {
+  const ws = wb.Sheets["_nedal_health"];
+  if (!ws) return [] as import("./health").HealthArchive[];
+  return XLSX.utils.sheet_to_json<import("./health").HealthArchive>(ws);
+}
+async function healthTemplate() {
+  const q = encodeURIComponent("trashed=false and mimeType='application/vnd.openxmlformats-officedocument.wordprocessingml.document' and (name contains 'اصابات' or name contains 'إصابات')");
+  const result = await (await drive(`/drive/v3/files?q=${q}&fields=files(id,name)`)).json() as { files: { id: string; name: string }[] };
+  const file = result.files.find(f => f.name.includes("تحويل"));
+  if (!file) throw new Error("لم يتم العثور على نموذج تحويل الإصابات في درايف");
+  return new Uint8Array(await (await drive(`/drive/v3/files/${file.id}?alt=media`)).arrayBuffer());
+}
+export const getHealthData = createServerFn({ method: "POST" }).inputValidator(d => auth.parse(d)).handler(async ({ data }) => {
+  const { wb } = await load(); require(wb, data.code, "read");
+  return { students: healthStudents(wb), info: healthInfo(wb), archives: healthArchives(wb) };
+});
+export const getHealthDocument = createServerFn({ method: "POST" }).inputValidator(d => auth.extend({ input: referralFields.optional(), fileId: z.string().optional() }).parse(d)).handler(async ({ data }) => {
+  const { wb } = await load(); require(wb, data.code, "read");
+  if (data.fileId) {
+    if (!healthArchives(wb).some(r => r.fileId === data.fileId)) throw new Error("النموذج غير موجود في الأرشيف");
+    return { base64: b64(new Uint8Array(await (await drive(`/drive/v3/files/${data.fileId}?alt=media`)).arrayBuffer())) };
+  }
+  if (!data.input) throw new Error("بيانات النموذج مطلوبة");
+  const student = healthStudents(wb).find(r => r.id === data.input?.studentId);
+  if (!student) throw new Error("الطالب غير موجود");
+  const info = healthInfo(wb);
+  const bytes = fillReferral(await healthTemplate(), { ...data.input, ...info, year: data.input.year, name: student.name, birth: student.birth, age: ageAt(student.birth, new Date().toISOString().slice(0, 10)) });
+  return { base64: b64(bytes) };
+});
+export const saveHealthReferral = createServerFn({ method: "POST" }).inputValidator(d => auth.extend({ input: referralFields }).parse(d)).handler(async ({ data }) => {
+  const L = await load(); require(L.wb, data.code, "user");
+  const student = healthStudents(L.wb).find(r => r.id === data.input.studentId);
+  if (!student) throw new Error("الطالب غير موجود");
+  const info = healthInfo(L.wb);
+  const bytes = fillReferral(await healthTemplate(), { ...data.input, ...info, year: data.input.year, name: student.name, birth: student.birth, age: ageAt(student.birth, new Date().toISOString().slice(0, 10)) });
+  const parent = await folderId("health");
+  const boundary = `health${Date.now()}`;
+  const meta = { name: `تحويل إصابات - ${student.name} - ${data.input.date}.docx`, parents: [parent] };
+  const body = new Blob([`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document\r\n\r\n`, bytes, `\r\n--${boundary}--`]);
+  const file = await (await drive("/upload/drive/v3/files?uploadType=multipart&fields=id", { method: "POST", headers: { "Content-Type": `multipart/related; boundary=${boundary}` }, body })).json() as { id: string };
+  const archive = { id: crypto.randomUUID(), name: student.name, studentId: student.id, date: data.input.date, reasons: data.input.reasons, fileId: file.id };
+  const all = [...healthArchives(L.wb), archive];
+  const ws = XLSX.utils.json_to_sheet(all);
+  if (L.wb.SheetNames.includes("_nedal_health")) L.wb.Sheets["_nedal_health"] = ws;
+  else XLSX.utils.book_append_sheet(L.wb, ws, "_nedal_health");
+  const sheet = L.wb.Sheets[sheetName(L.wb, "بيانات الطلاب")];
+  if (!sheet) throw new Error("ورقة الطلاب غير موجودة");
+  const header = rows(L.wb, "بيانات الطلاب")[0] ?? [];
+  for (const [name, value] of [["أسباب التحويل", data.input.reasons], ["التاريخ", data.input.date]]) {
+    let c = header.findIndex(v => s(v) === name);
+    if (c < 0) { c = header.length; header.push(name); XLSX.utils.sheet_add_aoa(sheet, [[name]], { origin: { r: 0, c } }); }
+    XLSX.utils.sheet_add_aoa(sheet, [[value]], { origin: { r: student.row, c } });
+  }
+  await save(L);
+  return { archive, base64: b64(bytes) };
+});
