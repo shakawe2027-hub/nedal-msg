@@ -9,7 +9,7 @@ import { getHealthData, getHealthDocument, saveHealthReferral } from "@/lib/msg.
 import { ageAt, displayDate, matchArabic, type ReferralInput, type Student } from "@/lib/health";
 import type { Session } from "@/lib/session";
 
-function OriginalDocument({ base64 }: { base64: string }) {
+export function OriginalDocument({ base64 }: { base64: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -22,6 +22,12 @@ function OriginalDocument({ base64 }: { base64: string }) {
       if (cancelled) return;
       const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
       await renderAsync(bytes, container, undefined, { className: "health-docx", inWrapper: true, ignoreLastRenderedPageBreak: true, breakPages: false, renderHeaders: true, renderFooters: true, useBase64URL: true });
+      const page = container.querySelector<HTMLElement>("section.health-docx");
+      if (page) {
+        const last = page.querySelector("article > p:last-child");
+        if (last?.textContent?.includes("المعالج")) last.classList.add("health-signature-line");
+        page.style.setProperty("--print-zoom", String(Math.min(1, 1050 / page.scrollHeight)));
+      }
     }).catch(() => setError("تعذر عرض النموذج الأصلي"));
     return () => { cancelled = true; };
   }, [base64]);
@@ -43,7 +49,7 @@ export function HealthWorkspace({ session }: { session: Session }) {
   useEffect(() => { if (q.data?.info.year) setF(p => ({ ...p, year: q.data.info.year })); }, [q.data?.info.year]);
   const set = (k: keyof ReferralInput, v: string) => { setF(p => ({ ...p, [k]: v })); setDoc(""); };
   const results = (q.data?.students ?? []).filter(s => matchArabic(s.name).includes(matchArabic(term)) || s.id.includes(term.trim()));
-  const archives = (q.data?.archives ?? []).filter(a => !month || a.date.startsWith(month)).toSorted((a, b) => b.date.localeCompare(a.date));
+  const archives = (q.data?.archives ?? []).filter(a => !month || a.date.startsWith(month)).sort((a, b) => b.date.localeCompare(a.date));
   const months = [...new Set(q.data?.archives.map(a => a.date.slice(0, 7)) ?? [])].sort().reverse();
   const openArchive = async (fileId: string) => {
     setBusy(true);
@@ -63,12 +69,12 @@ export function HealthWorkspace({ session }: { session: Session }) {
       } catch (error) { toast.error((error as Error).message); } finally { setBusy(false); }
     }}>
       <div className="health-search">
-        <input aria-label="اسم الطالب أو رقم الهوية" className="input" value={term} onChange={e => { setTerm(e.target.value); setSearched(false); }} placeholder="اسم الطالب أو رقم الهوية" />
+        <input aria-label="اسم الطالب أو رقم الهوية" role="combobox" aria-expanded={searched && !!term.trim()} aria-controls="student-options" autoComplete="off" className="input" value={term} onChange={e => { setTerm(e.target.value); setSearched(true); }} placeholder="اسم الطالب أو رقم الهوية" />
         <Button type="button" variant="outline" onClick={() => setSearched(true)} disabled={!term.trim()}><Search /> بحث</Button>
       </div>
-      {searched && <div className="student-results">{results.map(s => <Button key={s.id} variant="ghost" type="button" onClick={() => {
+      {searched && !!term.trim() && <div className="student-results" role="listbox" id="student-options">{results.slice(0, 30).map(s => <Button role="option" key={s.id} variant="ghost" type="button" onClick={() => {
         setStudent(s); setF(p => ({ ...p, studentId: s.id, address: s.address })); setDoc(""); setSearched(false);
-      }}>{s.name} · <bdi>{s.id}</bdi></Button>)}{!results.length && <p>لا توجد نتائج مطابقة</p>}</div>}
+      }}>{s.name} · <bdi>{s.id}</bdi> · <bdi>{displayDate(s.birth)}</bdi></Button>)}{!results.length && <p>لا توجد نتائج مطابقة</p>}</div>}
       <div className="grid-form">
         <Field label="اسم الطالب"><input className="input" readOnly value={student?.name ?? ""} /></Field>
         <Field label="رقم هوية الطالب"><input className="input" readOnly value={student?.id ?? ""} /></Field>

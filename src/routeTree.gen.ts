@@ -12,9 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ArchivesRouteImport } from './routes/archives'
 import { Route as HealthRouteImport } from './routes/health'
+import { Route as HealthMonthlyRouteImport } from './routes/health-monthly'
 import { Route as InRouteImport } from './routes/in'
 import { Route as OutRouteImport } from './routes/out'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as WelcomeRouteImport } from './routes/welcome'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -29,6 +31,11 @@ const ArchivesRoute = ArchivesRouteImport.update({
 const HealthRoute = HealthRouteImport.update({
   id: '/health',
   path: '/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HealthMonthlyRoute = HealthMonthlyRouteImport.update({
+  id: '/health-monthly',
+  path: '/health-monthly',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InRoute = InRouteImport.update({
@@ -46,47 +53,85 @@ const ReportsRoute = ReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/archives': typeof ArchivesRoute
   '/health': typeof HealthRoute
+  '/health-monthly': typeof HealthMonthlyRoute
   '/in': typeof InRoute
   '/out': typeof OutRoute
   '/reports': typeof ReportsRoute
+  '/welcome': typeof WelcomeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/archives': typeof ArchivesRoute
   '/health': typeof HealthRoute
+  '/health-monthly': typeof HealthMonthlyRoute
   '/in': typeof InRoute
   '/out': typeof OutRoute
   '/reports': typeof ReportsRoute
+  '/welcome': typeof WelcomeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/archives': typeof ArchivesRoute
   '/health': typeof HealthRoute
+  '/health-monthly': typeof HealthMonthlyRoute
   '/in': typeof InRoute
   '/out': typeof OutRoute
   '/reports': typeof ReportsRoute
+  '/welcome': typeof WelcomeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/archives' | '/health' | '/in' | '/out' | '/reports'
+  fullPaths:
+    | '/'
+    | '/archives'
+    | '/health'
+    | '/health-monthly'
+    | '/in'
+    | '/out'
+    | '/reports'
+    | '/welcome'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/archives' | '/health' | '/in' | '/out' | '/reports'
-  id: '__root__' | '/' | '/archives' | '/health' | '/in' | '/out' | '/reports'
+  to:
+    | '/'
+    | '/archives'
+    | '/health'
+    | '/health-monthly'
+    | '/in'
+    | '/out'
+    | '/reports'
+    | '/welcome'
+  id:
+    | '__root__'
+    | '/'
+    | '/archives'
+    | '/health'
+    | '/health-monthly'
+    | '/in'
+    | '/out'
+    | '/reports'
+    | '/welcome'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ArchivesRoute: typeof ArchivesRoute
   HealthRoute: typeof HealthRoute
+  HealthMonthlyRoute: typeof HealthMonthlyRoute
   InRoute: typeof InRoute
   OutRoute: typeof OutRoute
   ReportsRoute: typeof ReportsRoute
+  WelcomeRoute: typeof WelcomeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -112,6 +157,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/health-monthly': {
+      id: '/health-monthly'
+      path: '/health-monthly'
+      fullPath: '/health-monthly'
+      preLoaderRoute: typeof HealthMonthlyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/in': {
       id: '/in'
       path: '/in'
@@ -133,6 +185,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -140,9 +199,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ArchivesRoute: ArchivesRoute,
   HealthRoute: HealthRoute,
+  HealthMonthlyRoute: HealthMonthlyRoute,
   InRoute: InRoute,
   OutRoute: OutRoute,
   ReportsRoute: ReportsRoute,
+  WelcomeRoute: WelcomeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

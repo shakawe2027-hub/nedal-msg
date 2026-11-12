@@ -396,6 +396,13 @@ async function healthTemplate() {
   if (!file) throw new Error("لم يتم العثور على نموذج تحويل الإصابات في درايف");
   return new Uint8Array(await (await drive(`/drive/v3/files/${file.id}?alt=media`)).arrayBuffer());
 }
+async function healthEagle() {
+  const q = encodeURIComponent("trashed=false and name contains 'نسر الصحة'");
+  const result = await (await drive(`/drive/v3/files?q=${q}&fields=files(id)`)).json() as { files: { id: string }[] };
+  const file = result.files[0];
+  if (!file) return undefined;
+  return new Uint8Array(await (await drive(`/drive/v3/files/${file.id}?alt=media`)).arrayBuffer());
+}
 export const getHealthData = createServerFn({ method: "POST" }).inputValidator(d => auth.parse(d)).handler(async ({ data }) => {
   const { wb } = await load(); require(wb, data.code, "read");
   return { students: healthStudents(wb), info: healthInfo(wb), archives: healthArchives(wb) };
@@ -410,7 +417,7 @@ export const getHealthDocument = createServerFn({ method: "POST" }).inputValidat
   const student = healthStudents(wb).find(r => r.id === data.input?.studentId);
   if (!student) throw new Error("الطالب غير موجود");
   const info = healthInfo(wb);
-  const bytes = fillReferral(await healthTemplate(), { ...data.input, ...info, year: data.input.year, name: student.name, birth: student.birth, age: ageAt(student.birth, new Date().toISOString().slice(0, 10)) });
+  const bytes = fillReferral(await healthTemplate(), { ...data.input, ...info, year: data.input.year, name: student.name, birth: student.birth, age: ageAt(student.birth, new Date().toISOString().slice(0, 10)) }, await healthEagle());
   return { base64: b64(bytes) };
 });
 export const saveHealthReferral = createServerFn({ method: "POST" }).inputValidator(d => auth.extend({ input: referralFields }).parse(d)).handler(async ({ data }) => {
@@ -418,11 +425,11 @@ export const saveHealthReferral = createServerFn({ method: "POST" }).inputValida
   const student = healthStudents(L.wb).find(r => r.id === data.input.studentId);
   if (!student) throw new Error("الطالب غير موجود");
   const info = healthInfo(L.wb);
-  const bytes = fillReferral(await healthTemplate(), { ...data.input, ...info, year: data.input.year, name: student.name, birth: student.birth, age: ageAt(student.birth, new Date().toISOString().slice(0, 10)) });
+  const bytes = fillReferral(await healthTemplate(), { ...data.input, ...info, year: data.input.year, name: student.name, birth: student.birth, age: ageAt(student.birth, new Date().toISOString().slice(0, 10)) }, await healthEagle());
   const parent = await folderId("health");
   const boundary = `health${Date.now()}`;
   const meta = { name: `تحويل إصابات - ${student.name} - ${data.input.date}.docx`, parents: [parent] };
-  const body = new Blob([`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document\r\n\r\n`, bytes, `\r\n--${boundary}--`]);
+  const body = new Blob([`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document\r\n\r\n`, new Uint8Array(bytes).buffer, `\r\n--${boundary}--`]);
   const file = await (await drive("/upload/drive/v3/files?uploadType=multipart&fields=id", { method: "POST", headers: { "Content-Type": `multipart/related; boundary=${boundary}` }, body })).json() as { id: string };
   const archive = { id: crypto.randomUUID(), name: student.name, studentId: student.id, date: data.input.date, reasons: data.input.reasons, fileId: file.id };
   const all = [...healthArchives(L.wb), archive];

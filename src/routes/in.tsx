@@ -2,11 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Inbox, Search } from "lucide-react";
+import { Inbox } from "lucide-react";
 import { addIn, uploadAttachment } from "@/lib/msg.functions";
 import { useMsgData, type Session } from "@/lib/session";
 import { WorkspaceSummary } from "@/components/msg/workspace-summary";
-import { SchoolsModal } from "@/components/msg/schools";
 import { Reports, PendingModal } from "@/components/msg/register";
 import type { InRec } from "@/lib/msg";
 import { Shell } from "@/components/msg/shell";
@@ -35,7 +34,6 @@ function InForm({ session }: { session: Session }) {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState(false);
-  const [dir, setDir] = useState(false);
   const set = (k: keyof typeof empty) => (v: string) => setF((p) => ({ ...p, [k]: v }));
 
   const submit = async (e: React.FormEvent) => {
@@ -67,10 +65,6 @@ function InForm({ session }: { session: Session }) {
   return (
     <div className="entry-stack entry-in">
     <WorkspaceSummary rows={q.data?.in?.active ?? []} incoming={true} onPending={() => setPending(true)} />
-    <div className="row-gap no-print" style={{ justifyContent: "flex-start" }}>
-      <button className="btn btn-ghost" onClick={() => setDir(true)}><Search /> دليل المدارس</button>
-    </div>
-    {dir && <SchoolsModal code={session.code} onClose={() => setDir(false)} />}
     {pending && <PendingModal readOnly={session.role === "viewer"} code={session.code} rows={((q.data?.in?.active ?? []) as InRec[]).filter((r) => r.status === "يعاد مراجعة")} onClose={() => setPending(false)} />}
     {session.role === "viewer" ? <p className="viewer-note no-print">حساب مستكشف: استعراض وطباعة فقط</p> : <form className="sheet-card no-print" onSubmit={submit}>
       <div className="sheet-card-head">

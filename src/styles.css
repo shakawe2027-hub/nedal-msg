@@ -407,3 +407,55 @@ body:has(.reports-light) { background: var(--background); }
 .school-phones { display: flex; flex-wrap: wrap; gap: .35rem .9rem; font-size: .85rem; }
 .school-phones a { display: inline-flex; align-items: center; gap: .3rem; color: oklch(0.42 0.09 262); }
 .school-phones a svg { width: .85rem; height: .85rem; }
+
+/* School health workspace and welcome navigation */
+.health-brand { color: var(--brand-gold-deep); font-size: 1.35rem; font-weight: 800; }
+.welcome-workspace { max-width: 900px; margin: 2rem auto; }
+.welcome-heading { text-align: center; margin-bottom: 2rem; }
+.welcome-heading h1 { font-size: 2rem; }
+.welcome-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; }
+.welcome-actions > * { height: 90px; justify-content: space-between; white-space: normal; text-align: start; border-inline-start: 4px solid var(--brand-gold); }
+.welcome-actions span { flex: 1; }
+.health-workspace { display: grid; gap: 1.5rem; }
+.health-workspace h1 { display: flex; align-items: center; gap: .6rem; font-size: 1.6rem; }
+.health-form { display: grid; gap: 1rem; border-block: 1px solid var(--border); padding-block: 1.5rem; }
+.health-search { display: flex; gap: .6rem; }
+.health-search .input { flex: 1; min-width: 0; }
+.student-results { display: grid; max-height: 280px; overflow: auto; border: 1px solid var(--border); background: var(--card); }
+.student-results button { justify-content: start; height: auto; min-height: 42px; white-space: normal; flex-wrap: wrap; text-align: start; }
+.health-archive-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.health-archive-head select { width: auto; }
+.health-archive-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--border); padding-block: .8rem; }
+.monthly-group { border-top: 2px solid var(--brand-gold); }
+.monthly-group summary { display: flex; gap: .8rem; cursor: pointer; align-items: center; padding: 1rem 0; color: var(--primary); font-weight: 700; }
+.monthly-group summary span { margin-inline-start: auto; color: var(--muted-foreground); }
+.monthly-report { display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--border); padding: 1rem 0; }
+.monthly-report h2 { font-size: 1.1rem; }
+.referral-reason { border-inline-start: 3px solid var(--brand-gold); padding-inline-start: .8rem; margin-top: .7rem; color: var(--foreground); }
+.health-document { overflow: auto; direction: ltr; }
+.health-document .health-docx-wrapper { background: var(--secondary); padding: 12px; }
+.health-document section.health-docx { margin: 0 auto; }
+.health-document article p { text-align: right !important; direction: rtl; }
+.health-document header { font-family: Arial, sans-serif; }
+.health-document .health-signature-line { border-top: 3px solid var(--foreground); padding-top: 8px; display: flex; justify-content: space-between; }
+@media(max-width: 640px) {
+  .welcome-actions { grid-template-columns: 1fr; }
+  .health-archive-row, .health-archive-head, .monthly-report { flex-wrap: wrap; }
+  .health-search { flex-wrap: wrap; }
+}
+@media print {
+  body:has(.health-document) { margin: 0; }
+  body:has(.health-document) .shell-main { margin: 0; padding: 0; max-width: none; }
+  .health-document { overflow: visible; }
+  .health-document .health-docx-wrapper { padding: 0 !important; background: none !important; }
+  .health-document section.health-docx { box-shadow: none !important; margin: 0 !important; zoom: var(--print-zoom, .9); break-inside: avoid; }
+}
+@media print {
+  body:has(.health-document) { page: health-form-page; }
+  .health-workspace { display: block; }
+  .health-document section.health-docx { zoom: calc(var(--print-zoom, .9) * .9); }
+}
+@page health-form-page { size: A4 portrait; margin: 5mm; }
+@media print {
+  body:has(.health-document) .health-document section.health-docx { zoom: .72 !important; height: auto !important; min-height: 0 !important; }
+}

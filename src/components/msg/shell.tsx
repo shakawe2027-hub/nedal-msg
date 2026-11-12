@@ -1,6 +1,6 @@
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-import { Inbox, Send, BarChart3, LogOut, Mail, FileHeart } from "lucide-react";
+import { Inbox, Send, BarChart3, LogOut, Mail, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ClockBar } from "./clock";
 import { saveSession, useSession, type Session } from "@/lib/session";
@@ -22,7 +22,6 @@ export function Signature() {
 export function Shell({ children }: { children: (s: Session) => ReactNode }) {
   const session = useSession();
   const nav = useNavigate();
-  const path = useRouterState({ select: state => state.location.pathname });
   useEffect(() => {
     if (session === null) nav({ to: "/" });
   }, [session, nav]);
@@ -32,12 +31,12 @@ export function Shell({ children }: { children: (s: Session) => ReactNode }) {
       <header className="topbar no-print">
         <Brand />
         <nav className="topnav">
+          <Link to="/welcome" className="topnav-link"><Home /> الرئيسية</Link>
           <Link to="/in" className="topnav-link" activeProps={{ "data-active": "true" }}><Inbox /> الوارد</Link>
           <Link to="/out" className="topnav-link" activeProps={{ "data-active": "true" }}><Send /> الصادر</Link>
           <Link to="/reports" className="topnav-link" activeProps={{ "data-active": "true" }}><BarChart3 /> المعاينة والتقارير</Link>
         </nav>
         <div className="row-gap">
-          {(path === "/out" || path === "/health") && <Button asChild variant="ghost" className="topnav-link"><Link to="/health"><FileHeart /> الإصابات المدرسية</Link></Button>}
           <button className="topnav-link" onClick={() => { saveSession(null); nav({ to: "/" }); }}><LogOut /> خروج</button>
         </div>
       </header>

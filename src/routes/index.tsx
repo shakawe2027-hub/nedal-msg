@@ -34,7 +34,7 @@ function LoginPage() {
     try {
       const { role } = await login({ data: { code } });
       saveSession({ code: code.trim(), role });
-      nav({ to: role === "admin" ? "/reports" : "/in" });
+      nav({ to: "/welcome" });
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -47,6 +47,7 @@ function LoginPage() {
       <aside className="login-art">
         <div className="login-art-inner">
           <Brand big />
+          <p className="health-brand" dir="ltr">nedal.Health</p>
           <p className="login-tag">نظام إدارة المراسلات الرسمية</p>
           <p className="version-label">النسخة الحالية ( v.010.2026)</p>
           <p dir="ltr">Concept and development: nedal_qazzaz</p>
@@ -57,6 +58,7 @@ function LoginPage() {
         <ClockBar />
         <form className="login-card" onSubmit={submit}>
           <Brand big />
+          <p className="health-brand" dir="ltr">nedal.Health</p>
           <p className="login-tag">نظام إدارة المراسلات الرسمية</p>
           <span className="login-key"><KeyRound /></span>
           <p className="muted">أدخل الرقم الوطني، أو رمز صفحة المعاينة</p>

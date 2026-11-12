@@ -27,7 +27,7 @@ function cellText(cell: string, value: string) {
   });
 }
 /** Fill the original Word cells without recreating its letterhead, tables or images. */
-export function fillReferral(template: Uint8Array, r: Referral): Uint8Array {
+export function fillReferral(template: Uint8Array, r: Referral, eagle?: Uint8Array): Uint8Array {
   const files = unzipSync(template);
   const document = files["word/document.xml"];
   if (!document) throw new Error("نموذج Word غير صالح");
@@ -52,7 +52,18 @@ export function fillReferral(template: Uint8Array, r: Referral): Uint8Array {
   for (const name of Object.keys(files)) {
     const file = files[name];
     if (!file || !/^word\/header\d+\.xml$/.test(name)) continue;
-    files[name] = strToU8(strFromU8(file).replace(/<w:t(?:\s[^>]*)?>[\s\S]*?<\/w:t>/g, text => /\.{6,}/.test(text) ? `<w:t>${displayDate(r.headerDate)}</w:t>` : text));
+    let xml = strFromU8(file).replace(/<w:t(?:\s[^>]*)?>[\s\S]*?<\/w:t>/g, text => /\.{6,}/.test(text) ? `<w:t>${displayDate(r.headerDate)}</w:t>` : text);
+    if (eagle && xml.includes("بسم الله الرحمن الرحيم")) {
+      const relName = `word/_rels/${name.split("/").pop()}.rels`;
+      const existing = files[relName];
+      const rels = existing ? strFromU8(existing) : '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+      files[relName] = strToU8(rels.replace("</Relationships>", '<Relationship Id="rIdHealthEagle" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/health-eagle.svg"/></Relationships>'));
+      files["word/media/health-eagle.svg"] = new Uint8Array(eagle);
+      xml = xml.replace(/<w:p[ >][\s\S]*?<\/w:p>/g, p => p.includes("بسم الله الرحمن الرحيم") ? p + '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><wp:extent cx="350000" cy="475000"/><wp:docPr id="999" name="نسر الصحة"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="999" name="نسر الصحة"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rIdHealthEagle"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="350000" cy="475000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>' : p);
+    }
+    files[name] = strToU8(xml);
   }
+  const types = files["[Content_Types].xml"];
+  if (eagle && types && !strFromU8(types).includes('Extension="svg"')) files["[Content_Types].xml"] = strToU8(strFromU8(types).replace("</Types>", '<Default Extension="svg" ContentType="image/svg+xml"/></Types>'));
   return zipSync(files);
 }
