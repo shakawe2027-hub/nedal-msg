@@ -26,3 +26,4 @@ Previous school-forms app: to be removed (user asked to delete everything) — r
 - [ ] Post-login welcome page: school directory, incoming/outgoing, reports, health referral; move directory/health launchers there; add nedal.Health branding
 - [ ] Live student-name dropdown with ID/birth date; monthly injuries page with month/year, referral reasons and archived copies
 - [ ] Health print refinements: RTL text, header alignment, eagle image from Drive, bold rule and opposite-edge date/provider signature
+- [ ] Health corrections: blank manual reasons; required editable referring authority; delete archive and export Word; preserve original RTL layout, centered eagle and header rule
